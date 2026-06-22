@@ -9,6 +9,7 @@ function IndexPopup() {
         padding: 16
       }}>
       <h2>
+        hi
         Welcome to your{" "}
         <a href="https://www.plasmo.com" target="_blank">
           Plasmo
