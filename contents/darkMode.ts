@@ -9,6 +9,16 @@ export const config: PlasmoCSConfig = {
 
 const STYLE_ID = "qol-dark-mode"
 const TRANSITION_STYLE_ID = "qol-dark-mode-transition"
+const ROW_STRIPE_STYLE_ID = "qol-row-stripe"
+
+// Row striping for readability - kept in its own never-removed style tag so
+// it applies in light mode too. The dark-mode stylesheet's own row rules are
+// injected after this one, so they win the cascade whenever dark mode is on.
+const rowStripeCss = `
+  tbody tr:nth-child(even) td {
+    background-color: #f0f0f0 !important;
+  }
+`
 
 // Kept in a separate, never-removed style tag so the fade survives
 // toggling the main dark-mode stylesheet on/off. Scoped to the exact
@@ -180,7 +190,17 @@ function injectTransitionStyle() {
   ;(document.head || document.documentElement).appendChild(style)
 }
 
+function injectRowStripeStyle() {
+  if (document.getElementById(ROW_STRIPE_STYLE_ID)) return
+
+  const style = document.createElement("style")
+  style.id = ROW_STRIPE_STYLE_ID
+  style.textContent = rowStripeCss
+  ;(document.head || document.documentElement).appendChild(style)
+}
+
 function injectStyle() {
+  injectRowStripeStyle()
   injectTransitionStyle()
 
   if (document.getElementById(STYLE_ID)) return
