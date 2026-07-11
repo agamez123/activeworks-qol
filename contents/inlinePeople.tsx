@@ -30,6 +30,11 @@ interface AthleteData {
   programs?: { trainingGroups: TrainingGroup[] }[]
 }
 
+interface MeetSummary {
+  sportsId?: string
+  meetStartDate?: string
+}
+
 interface GroupInfo {
   id: string
   name: string
@@ -143,6 +148,59 @@ function buildRoster(
   groupList = groups.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+async function fetchMeetAttendance(
+  meetId: string,
+  csrfToken: string
+): Promise<AthleteData> {
+  const res = await fetch(
+    "https://sports.active.com/json/MeetEntryManagementService/readInvitedAthleteAttendance?nonhtml=true",
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        accept: "*/*",
+        "content-type": "application/json",
+        "x-requested-with": "XMLHttpRequest",
+        "aws-csrftoken": csrfToken
+      },
+      body: JSON.stringify({ meetId })
+    }
+  )
+
+  return res.json()
+}
+
+// A swimmer only shows up in the attendance list of meets they're actually
+// entered in -- junior development swimmers are frequently only entered in
+// development meets, never the club's most recent "main" meet -- so a single
+// meet's roster misses them. Merging every current-year meet's attendance
+// (deduped by swimmer/group id) is what actually gets the full roster.
+function mergeAthleteData(datasets: AthleteData[]): AthleteData {
+  const swimmerById = new Map<string, SwimmerEntry>()
+  const groupById = new Map<string, TrainingGroup>()
+
+  for (const data of datasets) {
+    for (const entry of data.swimmers ?? []) {
+      if (entry.swimmer?.id) swimmerById.set(entry.swimmer.id, entry)
+    }
+
+    for (const group of data.programs?.[0]?.trainingGroups ?? []) {
+      const existing = groupById.get(group.id)
+      groupById.set(group.id, {
+        ...group,
+        athleteIds: existing
+          ? Array.from(new Set([...existing.athleteIds, ...group.athleteIds]))
+          : group.athleteIds
+      })
+    }
+  }
+
+  return {
+    swimmers: Array.from(swimmerById.values()),
+    programs: [{ trainingGroups: Array.from(groupById.values()) }]
+  }
+}
+
 async function getGroupingData() {
   const csrfToken = getCSRF()
   const agencyId = getAgencyId()
@@ -178,36 +236,45 @@ async function getGroupingData() {
       }
     )
 
-    const meetData = await meetInfoRes.json()
+    const meetData: MeetSummary[] = await meetInfoRes.json()
 
-    // Most recent meet is the first entry
-    const meetId = meetData?.[0]?.sportsId
-    if (!meetId) {
+    const currentYear = new Date().getFullYear()
+    const meetIds = (meetData ?? [])
+      .filter(
+        (meet) =>
+          meet.sportsId &&
+          meet.meetStartDate &&
+          new Date(meet.meetStartDate).getFullYear() === currentYear
+      )
+      .map((meet) => meet.sportsId as string)
+
+    if (!meetIds.length) {
       console.warn(
-        "QOL: no meets found for this agency, group filter unavailable"
+        "QOL: no meets found for this agency in the current year, group filter unavailable"
       )
       return
     }
 
-    const athleteAttendanceRes = await fetch(
-      "https://sports.active.com/json/MeetEntryManagementService/readInvitedAthleteAttendance?nonhtml=true",
-      {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          accept: "*/*",
-          "content-type": "application/json",
-          "x-requested-with": "XMLHttpRequest",
-          "aws-csrftoken": csrfToken
-        },
-        body: JSON.stringify({ meetId })
-      }
+    // Fetched in parallel and via allSettled so one meet's attendance
+    // request failing doesn't blank out the roster from every other meet.
+    const results = await Promise.allSettled(
+      meetIds.map((meetId) => fetchMeetAttendance(meetId, csrfToken))
     )
 
-    const athleteData: AthleteData = await athleteAttendanceRes.json()
-    const trainingGroups = athleteData?.programs?.[0]?.trainingGroups
+    const athleteDataSets: AthleteData[] = []
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        athleteDataSets.push(result.value)
+      } else {
+        console.error(
+          "QOL: failed to load attendance for a meet",
+          result.reason
+        )
+      }
+    }
 
-    buildRoster(athleteData, trainingGroups)
+    const merged = mergeAthleteData(athleteDataSets)
+    buildRoster(merged, merged.programs?.[0]?.trainingGroups)
     addGroupingColumn()
   } catch (err) {
     console.error("QOL: failed to load training group data", err)
@@ -422,15 +489,37 @@ function setGroupFilter(groupId: string) {
   ) as HTMLTableElement | null
   if (!nativeTable || !filterTable) return
 
+  // The synthesized filter table always renders every matching swimmer in
+  // one page, so the native grid's pager (which only ever paginates the
+  // native grid) is meaningless while it's showing -- hide it alongside.
+  const pagingBar = document.getElementById("pagingBar")
+
   if (!groupId) {
     nativeTable.style.display = ""
     filterTable.style.display = "none"
+    if (pagingBar) pagingBar.style.display = ""
     return
   }
 
   renderFilteredRows(groupId)
   nativeTable.style.display = "none"
   filterTable.style.display = "table"
+  if (pagingBar) pagingBar.style.display = "none"
+}
+
+// Guards against a stale filter view surviving a peopleDetail round trip
+// (filter by group, click a name, hit back): the site reuses the same
+// People-page container across that navigation, so without this the old
+// filter table's "display: table" from before you left lingers alongside
+// the freshly re-rendered (unfiltered) native grid, and both show at once.
+// Called on every fresh entry to the people page so it always starts on "All".
+function resetGroupFilterUI() {
+  const select = document.getElementById(
+    FILTER_SELECT_ID
+  ) as HTMLSelectElement | null
+  if (select) select.value = ""
+
+  setGroupFilter("")
 }
 
 function buildFilterBar() {
@@ -500,6 +589,8 @@ function init() {
   pageObserver = null
 
   if (!window.location.hash.includes("/people/peopleHome")) return
+
+  resetGroupFilterUI()
 
   pageObserver = new MutationObserver(() => addGroupingColumn())
   pageObserver.observe(document.body, {
