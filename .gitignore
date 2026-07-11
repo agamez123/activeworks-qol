@@ -30,4 +30,7 @@ dist/
 .plasmo
 
 # typescript
-.tsbuildinfo
+*.tsbuildinfo
+
+# saved reference pages (site HTML/CSS captures for building content scripts)
+/reference
