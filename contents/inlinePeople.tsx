@@ -54,13 +54,13 @@ interface RosterEntry {
 // Palette is indexed by a hash of the group id, so colors stay stable across
 // reloads/seasons without hardcoding the actual group names.
 const GROUP_COLOR_PALETTE = [
-  "#e6194B",
-  "#3cb44b",
+  "#df3560",
+  "#45a552",
   "#4363d8",
-  "#f58231",
+  "#d18047",
   "#911eb4",
-  "#42d4f4",
-  "#f032e6",
+  "#5dbdd3",
+  "#e42fdb",
   "#9A6324",
   "#469990",
   "#000075"
@@ -331,9 +331,25 @@ function buildGroupDot(color: string, className?: string) {
   return dot
 }
 
+// dark mode's injected stylesheet colors links via `color: ... !important`,
+// so an inline color can only win by being !important too -- a plain
+// link.style.color assignment would be silently ignored whenever dark mode
+// is on. Passing no group clears back to the class/theme's default color.
+function applyLinkGroupColor(link: HTMLAnchorElement, group?: GroupInfo) {
+  if (group) {
+    link.style.setProperty("color", group.color, "important")
+  } else {
+    link.style.removeProperty("color")
+  }
+}
+
 function addTickerToNameCell(nameCell: HTMLTableCellElement, group: GroupInfo) {
-  const link = nameCell.querySelector("a")
-  if (!link || link.querySelector(".qol-ticker")) return
+  const link = nameCell.querySelector<HTMLAnchorElement>("a")
+  if (!link) return
+
+  applyLinkGroupColor(link, group)
+
+  if (link.querySelector(".qol-ticker")) return
 
   const dot = buildGroupDot(group.color, "qol-ticker")
   dot.title = group.name
@@ -422,6 +438,7 @@ function buildFilterTableRow(entry: RosterEntry) {
   if (entry.group) {
     nameLink.appendChild(buildGroupDot(entry.group.color))
   }
+  applyLinkGroupColor(nameLink, entry.group)
   nameLink.appendChild(
     document.createTextNode(`${entry.firstName} ${entry.lastName}`)
   )
