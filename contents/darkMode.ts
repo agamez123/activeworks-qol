@@ -55,7 +55,7 @@ const transitionCss = `
 
 const css = `
   :root {
-    --qol-bg: #181818;
+    --qol-bg: #1e1e1e;
     --qol-bg-alt: #222222;
     --qol-bg-elevated: #2a2a2a;
     --qol-bg-hover: #33475a;
@@ -127,10 +127,15 @@ const css = `
     background-image: none !important;
   }
 
-  /* Data grid rows */
+  /* Data grid rows - alternate shading for row scannability */
   .odd,
+  tbody tr:nth-child(odd) td,
   tbody tr:last-child td {
     background-color: var(--qol-bg-alt) !important;
+  }
+
+  tbody tr:nth-child(even) td {
+    background-color: var(--qol-bg) !important;
   }
 
   .table-hover tbody tr:hover,
