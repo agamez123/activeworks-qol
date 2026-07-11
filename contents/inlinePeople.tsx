@@ -387,6 +387,10 @@ const FILTER_BAR_ID = "qol-group-filter-bar"
 const FILTER_SELECT_ID = "qol-group-filter-select"
 const FILTER_TABLE_ID = "qol-group-filter-table"
 
+// The sidebar "View" toggle between the Athletes and Parents grids.
+const VIEW_ATHLETE_TOGGLE_ID = "athleteFilter"
+const VIEW_PARENT_TOGGLE_ID = "parentFilter"
+
 // The site's router assigns each route a "_nid" itself (an in-memory history
 // key, populated only inside active.navigator.navigate) and rejects any hash
 // it didn't mint that way, bouncing back to peopleHome. So instead of
@@ -568,6 +572,76 @@ function ensureGroupFilterUI() {
   table.parentElement.insertBefore(buildFilterTable(), table)
 }
 
+function setFilterBarVisible(visible: boolean) {
+  const bar = document.getElementById(FILTER_BAR_ID)
+  if (bar) bar.style.display = visible ? "" : "none"
+}
+
+function isParentViewActive(): boolean {
+  return (
+    document
+      .getElementById(VIEW_PARENT_TOGGLE_ID)
+      ?.classList.contains("selectedLabel") ?? false
+  )
+}
+
+// Parents is a completely different grid (#dataGridParent) -- neither the
+// native swimmer table/pager nor our filter table belong on screen while
+// it's active. (resetGroupFilterUI() isn't reused here: it explicitly shows
+// the native table via setGroupFilter(""), which is exactly wrong here --
+// that's what caused the swimmer table to reappear alongside Parents.)
+function hideNativeTableForParentView() {
+  const select = document.getElementById(
+    FILTER_SELECT_ID
+  ) as HTMLSelectElement | null
+  if (select) select.value = ""
+
+  const nativeTable =
+    document.querySelector<HTMLTableElement>("#dataGridAthlete")
+  const filterTable = document.getElementById(
+    FILTER_TABLE_ID
+  ) as HTMLTableElement | null
+  const pagingBar = document.getElementById("pagingBar")
+
+  if (nativeTable) nativeTable.style.display = "none"
+  if (filterTable) filterTable.style.display = "none"
+  if (pagingBar) pagingBar.style.display = "none"
+}
+
+// The group filter is keyed off swimmer names/IDs, so it's meaningless once
+// "Parents" is selected. Hide our filter table and the native swimmer grid
+// (or, switching back, reset to "All" -- the same reset used for the
+// peopleDetail back-navigation) and hide the dropdown entirely while Parents
+// is active; restore it when switching back to Athletes.
+function syncGroupFilterToView() {
+  const parentView = isParentViewActive()
+
+  if (parentView) {
+    hideNativeTableForParentView()
+  } else {
+    resetGroupFilterUI()
+  }
+
+  setFilterBarVisible(!parentView)
+}
+
+// Hooked once the sidebar toggle exists; also runs an initial sync in case
+// the page loaded with Parents already selected.
+function ensureViewToggleHook() {
+  const parentToggle = document.getElementById(VIEW_PARENT_TOGGLE_ID)
+  const athleteToggle = document.getElementById(VIEW_ATHLETE_TOGGLE_ID)
+  if (!parentToggle || !athleteToggle) return
+  if (parentToggle.dataset.qolHooked) return
+
+  parentToggle.dataset.qolHooked = "1"
+  athleteToggle.dataset.qolHooked = "1"
+
+  parentToggle.addEventListener("click", syncGroupFilterToView)
+  athleteToggle.addEventListener("click", syncGroupFilterToView)
+
+  syncGroupFilterToView()
+}
+
 function addGroupingColumn() {
   // Inject group header (guarded so re-running on every mutation doesn't duplicate it)
   const thead = document.querySelector("#dataGridAthlete > thead > tr")
@@ -576,6 +650,7 @@ function addGroupingColumn() {
   }
 
   ensureGroupFilterUI()
+  ensureViewToggleHook()
   tagRows()
 }
 
