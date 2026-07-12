@@ -3,8 +3,8 @@ import type { PlasmoCSConfig } from "plasmo"
 import { DARK_MODE_STORAGE_KEY } from "~lib/storage"
 
 export const config: PlasmoCSConfig = {
-  matches: ["*://sports.active.com/*"],
-  run_at: "document_start"
+	matches: ["*://sports.active.com/*"],
+	run_at: "document_start"
 }
 
 const STYLE_ID = "qol-dark-mode"
@@ -16,9 +16,9 @@ const LAYOUT_STYLE_ID = "qol-layout-padding"
 // it applies in light mode too. The dark-mode stylesheet's own row rules are
 // injected after this one, so they win the cascade whenever dark mode is on.
 const rowStripeCss = `
-  tbody tr:nth-child(even) td {
-    background-color: #f0f0f0 !important;
-  }
+	tbody tr:nth-child(even) td {
+		background-color: #f0f0f0 !important;
+	}
 `
 
 // The site's own CSS zeroes out this column's side padding
@@ -28,9 +28,9 @@ const rowStripeCss = `
 // sidebar divider. Kept in its own never-removed style tag so it applies in
 // light mode too.
 const layoutPaddingCss = `
-  .active-swimming-components-PageLayout-wrapTableColumn {
-    padding: 0 20px !important;
-  }
+	.active-swimming-components-PageLayout-wrapTableColumn {
+		padding: 0 20px !important;
+	}
 `
 
 // Kept in a separate, never-removed style tag so the fade survives
@@ -39,219 +39,219 @@ const layoutPaddingCss = `
 // browser to repaint every element on every frame, which is what caused
 // the jank).
 const transitionCss = `
-  html,
-  body,
-  h1, h2, h3, h4, h5, h6,
-  label,
-  .checkbox,
-  .dropdown__button,
-  .dropdown__button-text,
-  .active-swimming-components-BaseInput,
-  .form__instruction,
-  .form__label,
-  .table,
-  tbody > tr > td,
-  .viewlabel,
-  #tableTitle,
-  #headerText,
-  #programDetail,
-  .item-header,
-  .athlete-info,
-  a,
-  .fndArch-LinkBlueOnLightGray,
-  .btn,
-  input,
-  select,
-  textarea,
-  .dropdown__menu,
-  .dropdown__menu li,
-  .dropdown__menu li a,
-  #athleteFilerArea,
-  .odd,
-  tbody tr,
-  tbody tr.selected,
-  .sidebar a,
-  .pagination > li > span,
-  .highcharts-background,
-  .header.CollapseAll,
-  .header.Itemheader,
-  .sectionTitle {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out, fill 0.15s ease-in-out !important;
-  }
+	html,
+	body,
+	h1, h2, h3, h4, h5, h6,
+	label,
+	.checkbox,
+	.dropdown__button,
+	.dropdown__button-text,
+	.active-swimming-components-BaseInput,
+	.form__instruction,
+	.form__label,
+	.table,
+	tbody > tr > td,
+	.viewlabel,
+	#tableTitle,
+	#headerText,
+	#programDetail,
+	.item-header,
+	.athlete-info,
+	a,
+	.fndArch-LinkBlueOnLightGray,
+	.btn,
+	input,
+	select,
+	textarea,
+	.dropdown__menu,
+	.dropdown__menu li,
+	.dropdown__menu li a,
+	#athleteFilerArea,
+	.odd,
+	tbody tr,
+	tbody tr.selected,
+	.sidebar a,
+	.pagination > li > span,
+	.highcharts-background,
+	.header.CollapseAll,
+	.header.Itemheader,
+	.sectionTitle {
+		transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out, fill 0.15s ease-in-out !important;
+	}
 `
 
 const css = `
-  :root {
-    --qol-bg: #1e1e1e;
-    --qol-bg-alt: #222222;
-    --qol-bg-elevated: #2a2a2a;
-    --qol-bg-hover: #33475a;
-    --qol-border: #444444;
-    --qol-text: #e4e4e4;
-    --qol-link: #4dbde9;
-  }
+	:root {
+		--qol-bg: #1e1e1e;
+		--qol-bg-alt: #222222;
+		--qol-bg-elevated: #2a2a2a;
+		--qol-bg-hover: #33475a;
+		--qol-border: #444444;
+		--qol-text: #e4e4e4;
+		--qol-link: #4dbde9;
+	}
 
-  html,
-  body {
-    background-color: var(--qol-bg) !important;
-    color: var(--qol-text) !important;
-  }
+	html,
+	body {
+		background-color: var(--qol-bg) !important;
+		color: var(--qol-text) !important;
+	}
 
-  /* Text hardcoded to dark grays/black by the site's own CSS */
-  h1, h2, h3, h4, h5, h6,
-  label,
-  .checkbox,
-  .dropdown__button,
-  .dropdown__button-text,
-  .active-swimming-components-BaseInput,
-  .form__instruction,
-  .form__label,
-  .table,
-  tbody > tr > td,
-  .viewlabel,
-  #tableTitle,
-  #headerText,
-  #programDetail,
-  .item-header,
-  .athlete-info {
-    color: var(--qol-text) !important;
-  }
+	/* Text hardcoded to dark grays/black by the site's own CSS */
+	h1, h2, h3, h4, h5, h6,
+	label,
+	.checkbox,
+	.dropdown__button,
+	.dropdown__button-text,
+	.active-swimming-components-BaseInput,
+	.form__instruction,
+	.form__label,
+	.table,
+	tbody > tr > td,
+	.viewlabel,
+	#tableTitle,
+	#headerText,
+	#programDetail,
+	.item-header,
+	.athlete-info {
+		color: var(--qol-text) !important;
+	}
 
-  a,
-  .fndArch-LinkBlueOnLightGray {
-    color: var(--qol-link) !important;
-  }
+	a,
+	.fndArch-LinkBlueOnLightGray {
+		color: var(--qol-link) !important;
+	}
 
-  /* Buttons, inputs, selects that default to light backgrounds */
-  .btn,
-  input,
-  select,
-  textarea,
-  .dropdown__button {
-    background-color: var(--qol-bg-elevated) !important;
-    background-image: none !important;
-    color: var(--qol-text) !important;
-    border-color: var(--qol-border) !important;
-  }
+	/* Buttons, inputs, selects that default to light backgrounds */
+	.btn,
+	input,
+	select,
+	textarea,
+	.dropdown__button {
+		background-color: var(--qol-bg-elevated) !important;
+		background-image: none !important;
+		color: var(--qol-text) !important;
+		border-color: var(--qol-border) !important;
+	}
 
-  /* Dropdown / combobox menus */
-  .dropdown__menu,
-  .dropdown__menu li {
-    background-color: var(--qol-bg-elevated) !important;
-    color: var(--qol-text) !important;
-  }
+	/* Dropdown / combobox menus */
+	.dropdown__menu,
+	.dropdown__menu li {
+		background-color: var(--qol-bg-elevated) !important;
+		color: var(--qol-text) !important;
+	}
 
-  .dropdown__menu li a {
-    color: var(--qol-text) !important;
-  }
+	.dropdown__menu li a {
+		color: var(--qol-text) !important;
+	}
 
-  .dropdown__menu li:hover {
-    background-color: var(--qol-bg-hover) !important;
-  }
+	.dropdown__menu li:hover {
+		background-color: var(--qol-bg-hover) !important;
+	}
 
-  #athleteFilerArea {
-    background-color: var(--qol-bg-alt) !important;
-    background-image: none !important;
-  }
+	#athleteFilerArea {
+		background-color: var(--qol-bg-alt) !important;
+		background-image: none !important;
+	}
 
-  /* Data grid rows - alternate shading for row scannability */
-  .odd,
-  tbody tr:nth-child(odd) td,
-  tbody tr:last-child td {
-    background-color: var(--qol-bg-alt) !important;
-  }
+	/* Data grid rows - alternate shading for row scannability */
+	.odd,
+	tbody tr:nth-child(odd) td,
+	tbody tr:last-child td {
+		background-color: var(--qol-bg-alt) !important;
+	}
 
-  tbody tr:nth-child(even) td {
-    background-color: var(--qol-bg) !important;
-  }
+	tbody tr:nth-child(even) td {
+		background-color: var(--qol-bg) !important;
+	}
 
-  .table-hover tbody tr:hover,
-  tbody tr:hover {
-    background-color: var(--qol-bg-hover) !important;
-    color: var(--qol-text) !important;
-  }
+	.table-hover tbody tr:hover,
+	tbody tr:hover {
+		background-color: var(--qol-bg-hover) !important;
+		color: var(--qol-text) !important;
+	}
 
-  tbody tr.selected {
-    background-color: #244b57 !important;
-    color: var(--qol-text) !important;
-  }
+	tbody tr.selected {
+		background-color: #244b57 !important;
+		color: var(--qol-text) !important;
+	}
 
-  /* Left nav / FAQ sidebar links */
-  .sidebar a {
-    background-color: var(--qol-bg-elevated) !important;
-    color: var(--qol-text) !important;
-  }
+	/* Left nav / FAQ sidebar links */
+	.sidebar a {
+		background-color: var(--qol-bg-elevated) !important;
+		color: var(--qol-text) !important;
+	}
 
-  /* Pagination */
-  .pagination > li > span {
-    background-color: var(--qol-bg-elevated) !important;
-    border-color: var(--qol-border) !important;
-    color: var(--qol-link) !important;
-  }
+	/* Pagination */
+	.pagination > li > span {
+		background-color: var(--qol-bg-elevated) !important;
+		border-color: var(--qol-border) !important;
+		color: var(--qol-link) !important;
+	}
 
-  .pagination > li > span:hover {
-    background-color: var(--qol-bg-hover) !important;
-  }
+	.pagination > li > span:hover {
+		background-color: var(--qol-bg-hover) !important;
+	}
 
-  /* Highcharts pie/donut charts (e.g. the Meet Attendance summary) render
-     their own background rect with a hardcoded white fill. */
-  .highcharts-background {
-    fill: var(--qol-bg-elevated) !important;
-  }
+	/* Highcharts pie/donut charts (e.g. the Meet Attendance summary) render
+		 their own background rect with a hardcoded white fill. */
+	.highcharts-background {
+		fill: var(--qol-bg-elevated) !important;
+	}
 
-  /* MeetEntryByEvent: sidebar filter section headers ("Collapse all",
-     "Event gender", "Event age group", etc.) keep the site's own hardcoded
-     background/text regardless of theme, so they don't follow dark mode. */
-  .header.CollapseAll,
-  .header.Itemheader,
-  .eventByEvent,
-  .eventTitle {
-    background: var(--qol-bg-elevated) !important;
-    color: var(--qol-text) !important;
-  }
+	/* MeetEntryByEvent: sidebar filter section headers ("Collapse all",
+		 "Event gender", "Event age group", etc.) keep the site's own hardcoded
+		 background/text regardless of theme, so they don't follow dark mode. */
+	.header.CollapseAll,
+	.header.Itemheader,
+	.eventByEvent,
+	.eventTitle {
+		background: var(--qol-bg-elevated) !important;
+		color: var(--qol-text) !important;
+	}
 
-  .session {
-    background-color: var(--qol-bg-alt) !important;
-  }
+	.session {
+		background-color: var(--qol-bg-alt) !important;
+	}
 
-  .session .title {
-    color: var(--qol-text) !important;
-  }
+	.session .title {
+		color: var(--qol-text) !important;
+	}
 
-  .header.Itemheader:hover {
-    background: var(--qol-bg-hover) !important;
-  }
+	.header.Itemheader:hover {
+		background: var(--qol-bg-hover) !important;
+	}
 
-  .sectionTitle {
-    color: var(--qol-text) !important;
-  }
+	.sectionTitle {
+		color: var(--qol-text) !important;
+	}
 
-  /* Modals render into a portal (.modal-root) appended to <body> with the
-     site's own hardcoded white background/dark text, so they don't inherit
-     the dark-mode rules above. */
-  .modal-content,
-  .modal-box {
-    background-color: var(--qol-bg-elevated) !important;
-  }
+	/* Modals render into a portal (.modal-root) appended to <body> with the
+		 site's own hardcoded white background/dark text, so they don't inherit
+		 the dark-mode rules above. */
+	.modal-content,
+	.modal-box {
+		background-color: var(--qol-bg-elevated) !important;
+	}
 
-  .modal-header,
-  .modal-footer {
-    background-color: var(--qol-bg-elevated) !important;
-    color: var(--qol-text) !important;
-  }
+	.modal-header,
+	.modal-footer {
+		background-color: var(--qol-bg-elevated) !important;
+		color: var(--qol-text) !important;
+	}
 
-  .modal-title,
-  .modal-body {
-    color: var(--qol-text) !important;
-  }
+	.modal-title,
+	.modal-body {
+		color: var(--qol-text) !important;
+	}
 
-  .modal-close {
-    color: var(--qol-text) !important;
-  }
+	.modal-close {
+		color: var(--qol-text) !important;
+	}
 
-  .modal-lists {
-    border-color: var(--qol-border) !important;
-  }
+	.modal-lists {
+		border-color: var(--qol-border) !important;
+	}
 `
 
 // Optimistically on so there's no flash-of-light for the common case;
@@ -259,83 +259,83 @@ const css = `
 let darkModeEnabled = true
 
 function injectTransitionStyle() {
-  if (document.getElementById(TRANSITION_STYLE_ID)) return
+	if (document.getElementById(TRANSITION_STYLE_ID)) return
 
-  const style = document.createElement("style")
-  style.id = TRANSITION_STYLE_ID
-  style.textContent = transitionCss
-  ;(document.head || document.documentElement).appendChild(style)
+	const style = document.createElement("style")
+	style.id = TRANSITION_STYLE_ID
+	style.textContent = transitionCss
+	;(document.head || document.documentElement).appendChild(style)
 }
 
 function injectRowStripeStyle() {
-  if (document.getElementById(ROW_STRIPE_STYLE_ID)) return
+	if (document.getElementById(ROW_STRIPE_STYLE_ID)) return
 
-  const style = document.createElement("style")
-  style.id = ROW_STRIPE_STYLE_ID
-  style.textContent = rowStripeCss
-  ;(document.head || document.documentElement).appendChild(style)
+	const style = document.createElement("style")
+	style.id = ROW_STRIPE_STYLE_ID
+	style.textContent = rowStripeCss
+	;(document.head || document.documentElement).appendChild(style)
 }
 
 function injectLayoutPaddingStyle() {
-  if (document.getElementById(LAYOUT_STYLE_ID)) return
+	if (document.getElementById(LAYOUT_STYLE_ID)) return
 
-  const style = document.createElement("style")
-  style.id = LAYOUT_STYLE_ID
-  style.textContent = layoutPaddingCss
-  ;(document.head || document.documentElement).appendChild(style)
+	const style = document.createElement("style")
+	style.id = LAYOUT_STYLE_ID
+	style.textContent = layoutPaddingCss
+	;(document.head || document.documentElement).appendChild(style)
 }
 
 function injectStyle() {
-  injectRowStripeStyle()
-  injectLayoutPaddingStyle()
-  injectTransitionStyle()
+	injectRowStripeStyle()
+	injectLayoutPaddingStyle()
+	injectTransitionStyle()
 
-  if (document.getElementById(STYLE_ID)) return
+	if (document.getElementById(STYLE_ID)) return
 
-  const style = document.createElement("style")
-  style.id = STYLE_ID
-  style.textContent = css
-  ;(document.head || document.documentElement).appendChild(style)
+	const style = document.createElement("style")
+	style.id = STYLE_ID
+	style.textContent = css
+	;(document.head || document.documentElement).appendChild(style)
 }
 
 function removeStyle() {
-  document.getElementById(STYLE_ID)?.remove()
+	document.getElementById(STYLE_ID)?.remove()
 }
 
 function applyDarkMode() {
-  if (darkModeEnabled) injectStyle()
+	if (darkModeEnabled) injectStyle()
 }
 
 applyDarkMode()
 
 chrome.storage.sync.get([DARK_MODE_STORAGE_KEY], (result) => {
-  darkModeEnabled = result[DARK_MODE_STORAGE_KEY] ?? true
+	darkModeEnabled = result[DARK_MODE_STORAGE_KEY] ?? true
 
-  if (darkModeEnabled) {
-    applyDarkMode()
-  } else {
-    removeStyle()
-  }
+	if (darkModeEnabled) {
+		applyDarkMode()
+	} else {
+		removeStyle()
+	}
 })
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== "sync" || !changes[DARK_MODE_STORAGE_KEY]) return
+	if (area !== "sync" || !changes[DARK_MODE_STORAGE_KEY]) return
 
-  darkModeEnabled = changes[DARK_MODE_STORAGE_KEY].newValue ?? true
+	darkModeEnabled = changes[DARK_MODE_STORAGE_KEY].newValue ?? true
 
-  if (darkModeEnabled) {
-    applyDarkMode()
-  } else {
-    removeStyle()
-  }
+	if (darkModeEnabled) {
+		applyDarkMode()
+	} else {
+		removeStyle()
+	}
 })
 
 // Re-apply if the site's own bootstrap process rebuilds the document
 // and drops our injected stylesheet.
 const observer = new MutationObserver(() => applyDarkMode())
 observer.observe(document.documentElement, {
-  childList: true,
-  subtree: true
+	childList: true,
+	subtree: true
 })
 
 window.addEventListener("hashchange", applyDarkMode)

@@ -6,9 +6,9 @@ import type { PlasmoCSConfig } from "plasmo"
 // so it dispatches NAVIGATE_EVENT on the shared DOM and this script does the
 // actual call, exactly like the site's own peopleDetail links do.
 export const config: PlasmoCSConfig = {
-  matches: ["*://sports.active.com/*"],
-  world: "MAIN",
-  run_at: "document_start"
+	matches: ["*://sports.active.com/*"],
+	world: "MAIN",
+	run_at: "document_start"
 }
 
 export const NAVIGATE_EVENT = "qol-navigate-people-detail"
@@ -16,21 +16,21 @@ export const NAVIGATE_EVENT = "qol-navigate-people-detail"
 // The site's own global namespace object (window.active), typed just enough
 // to cover the one call we make into it.
 declare global {
-  interface Window {
-    active?: {
-      navigator?: {
-        navigate: (path: string, params: Record<string, unknown>) => void
-      }
-    }
-  }
+	interface Window {
+		active?: {
+			navigator?: {
+				navigate: (path: string, params: Record<string, unknown>) => void
+			}
+		}
+	}
 }
 
 window.addEventListener(NAVIGATE_EVENT, ((e: CustomEvent<{ spid: string }>) => {
-  const spid = e.detail?.spid
-  if (!spid) return
+	const spid = e.detail?.spid
+	if (!spid) return
 
-  window.active?.navigator?.navigate("/active/swimming/people/peopleDetail", {
-    spid,
-    from: "peopleHome"
-  })
+	window.active?.navigator?.navigate("/active/swimming/people/peopleDetail", {
+		spid,
+		from: "peopleHome"
+	})
 }) as EventListener)

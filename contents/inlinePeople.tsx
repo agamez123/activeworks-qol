@@ -4,89 +4,89 @@ import { getAgencyId, getCSRF } from "./pageContext"
 import { NAVIGATE_EVENT } from "./peopleNavigatorBridge"
 
 export const config: PlasmoCSConfig = {
-  matches: ["*://sports.active.com/*"],
-  run_at: "document_idle"
+	matches: ["*://sports.active.com/*"],
+	run_at: "document_idle"
 }
 
 interface TrainingGroup {
-  athleteIds: string[]
-  name: string
-  id: string
+	athleteIds: string[]
+	name: string
+	id: string
 }
 
 interface SwimmerEntry {
-  swimmer?: {
-    id: string
-    firstName: string
-    lastName: string
-    age?: number
-    dob?: string
-    gender?: string
-  }
+	swimmer?: {
+		id: string
+		firstName: string
+		lastName: string
+		age?: number
+		dob?: string
+		gender?: string
+	}
 }
 
 interface AthleteData {
-  swimmers?: SwimmerEntry[]
-  programs?: { trainingGroups: TrainingGroup[] }[]
+	swimmers?: SwimmerEntry[]
+	programs?: { trainingGroups: TrainingGroup[] }[]
 }
 
 interface MeetSummary {
-  sportsId?: string
-  meetStartDate?: string
+	sportsId?: string
+	meetStartDate?: string
 }
 
 interface GroupInfo {
-  id: string
-  name: string
-  color: string
+	id: string
+	name: string
+	color: string
 }
 
 interface RosterEntry {
-  id: string
-  firstName: string
-  lastName: string
-  age?: number
-  dob?: string
-  gender?: string
-  group?: GroupInfo
+	id: string
+	firstName: string
+	lastName: string
+	age?: number
+	dob?: string
+	gender?: string
+	group?: GroupInfo
 }
 
 // Palette is indexed by a hash of the group id, so colors stay stable across
 // reloads/seasons without hardcoding the actual group names.
 const GROUP_COLOR_PALETTE = [
-  "#df3560",
-  "#45a552",
-  "#4363d8",
-  "#d18047",
-  "#911eb4",
-  "#5dbdd3",
-  "#e42fdb",
-  "#9A6324",
-  "#469990",
-  "#000075"
+	"#df3560",
+	"#45a552",
+	"#4363d8",
+	"#d18047",
+	"#911eb4",
+	"#5dbdd3",
+	"#e42fdb",
+	"#9A6324",
+	"#469990",
+	"#000075"
 ]
 
 function colorForGroupId(groupId: string): string {
-  let hash = 0
-  for (let i = 0; i < groupId.length; i++) {
-    hash = (hash * 31 + groupId.charCodeAt(i)) >>> 0
-  }
-  return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length]
+	let hash = 0
+	for (let i = 0; i < groupId.length; i++) {
+		hash = (hash * 31 + groupId.charCodeAt(i)) >>> 0
+	}
+	return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length]
 }
 
 function normalizeName(name: string): string {
-  return name.trim().replace(/\s+/g, " ").toLowerCase()
+	return name.trim().replace(/\s+/g, " ").toLowerCase()
 }
 
 function formatDob(dob?: string): string {
-  const [y, m, d] = (dob ?? "").split("-")
-  if (!y || !m || !d) return dob ?? ""
-  return `${y}/${Number(m)}/${Number(d)}`
+	const [y, m, d] = (dob ?? "").split("-")
+	if (!y || !m || !d) return dob ?? ""
+	return `${y}/${Number(m)}/${Number(d)}`
 }
 
 function formatGender(gender?: string): string {
-  if (!gender) return ""
-  return gender.charAt(0) + gender.slice(1).toLowerCase()
+	if (!gender) return ""
+	return gender.charAt(0) + gender.slice(1).toLowerCase()
 }
 
 // Maps a normalized "First Last" name (as rendered in the People grid) to
@@ -98,76 +98,76 @@ let roster: RosterEntry[] = []
 let groupList: GroupInfo[] = []
 
 function buildRoster(
-  athleteData: AthleteData,
-  trainingGroups: TrainingGroup[]
+	athleteData: AthleteData,
+	trainingGroups: TrainingGroup[]
 ) {
-  const idToGroup = new Map<string, GroupInfo>()
-  const groups: GroupInfo[] = []
+	const idToGroup = new Map<string, GroupInfo>()
+	const groups: GroupInfo[] = []
 
-  for (const group of trainingGroups ?? []) {
-    const info: GroupInfo = {
-      id: group.id,
-      name: group.name,
-      color: colorForGroupId(group.id)
-    }
-    groups.push(info)
-    for (const athleteId of group.athleteIds) {
-      idToGroup.set(athleteId, info)
-    }
-  }
+	for (const group of trainingGroups ?? []) {
+		const info: GroupInfo = {
+			id: group.id,
+			name: group.name,
+			color: colorForGroupId(group.id)
+		}
+		groups.push(info)
+		for (const athleteId of group.athleteIds) {
+			idToGroup.set(athleteId, info)
+		}
+	}
 
-  const nameMap = new Map<string, GroupInfo>()
-  const entries: RosterEntry[] = []
+	const nameMap = new Map<string, GroupInfo>()
+	const entries: RosterEntry[] = []
 
-  for (const entry of athleteData?.swimmers ?? []) {
-    const swimmer = entry.swimmer
-    if (!swimmer?.id) continue
+	for (const entry of athleteData?.swimmers ?? []) {
+		const swimmer = entry.swimmer
+		if (!swimmer?.id) continue
 
-    const group = idToGroup.get(swimmer.id)
+		const group = idToGroup.get(swimmer.id)
 
-    entries.push({
-      id: swimmer.id,
-      firstName: swimmer.firstName,
-      lastName: swimmer.lastName,
-      age: swimmer.age,
-      dob: swimmer.dob,
-      gender: swimmer.gender,
-      group
-    })
+		entries.push({
+			id: swimmer.id,
+			firstName: swimmer.firstName,
+			lastName: swimmer.lastName,
+			age: swimmer.age,
+			dob: swimmer.dob,
+			gender: swimmer.gender,
+			group
+		})
 
-    if (group) {
-      nameMap.set(
-        normalizeName(`${swimmer.firstName} ${swimmer.lastName}`),
-        group
-      )
-    }
-  }
+		if (group) {
+			nameMap.set(
+				normalizeName(`${swimmer.firstName} ${swimmer.lastName}`),
+				group
+			)
+		}
+	}
 
-  nameToGroup = nameMap
-  roster = entries
-  groupList = groups.sort((a, b) => a.name.localeCompare(b.name))
+	nameToGroup = nameMap
+	roster = entries
+	groupList = groups.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 async function fetchMeetAttendance(
-  meetId: string,
-  csrfToken: string
+	meetId: string,
+	csrfToken: string
 ): Promise<AthleteData> {
-  const res = await fetch(
-    "https://sports.active.com/json/MeetEntryManagementService/readInvitedAthleteAttendance?nonhtml=true",
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        accept: "*/*",
-        "content-type": "application/json",
-        "x-requested-with": "XMLHttpRequest",
-        "aws-csrftoken": csrfToken
-      },
-      body: JSON.stringify({ meetId })
-    }
-  )
+	const res = await fetch(
+		"https://sports.active.com/json/MeetEntryManagementService/readInvitedAthleteAttendance?nonhtml=true",
+		{
+			method: "POST",
+			credentials: "include",
+			headers: {
+				accept: "*/*",
+				"content-type": "application/json",
+				"x-requested-with": "XMLHttpRequest",
+				"aws-csrftoken": csrfToken
+			},
+			body: JSON.stringify({ meetId })
+		}
+	)
 
-  return res.json()
+	return res.json()
 }
 
 // A swimmer only shows up in the attendance list of meets they're actually
@@ -176,159 +176,159 @@ async function fetchMeetAttendance(
 // meet's roster misses them. Merging every current-year meet's attendance
 // (deduped by swimmer/group id) is what actually gets the full roster.
 function mergeAthleteData(datasets: AthleteData[]): AthleteData {
-  const swimmerById = new Map<string, SwimmerEntry>()
-  const groupById = new Map<string, TrainingGroup>()
+	const swimmerById = new Map<string, SwimmerEntry>()
+	const groupById = new Map<string, TrainingGroup>()
 
-  for (const data of datasets) {
-    for (const entry of data.swimmers ?? []) {
-      if (entry.swimmer?.id) swimmerById.set(entry.swimmer.id, entry)
-    }
+	for (const data of datasets) {
+		for (const entry of data.swimmers ?? []) {
+			if (entry.swimmer?.id) swimmerById.set(entry.swimmer.id, entry)
+		}
 
-    for (const group of data.programs?.[0]?.trainingGroups ?? []) {
-      const existing = groupById.get(group.id)
-      groupById.set(group.id, {
-        ...group,
-        athleteIds: existing
-          ? Array.from(new Set([...existing.athleteIds, ...group.athleteIds]))
-          : group.athleteIds
-      })
-    }
-  }
+		for (const group of data.programs?.[0]?.trainingGroups ?? []) {
+			const existing = groupById.get(group.id)
+			groupById.set(group.id, {
+				...group,
+				athleteIds: existing
+					? Array.from(new Set([...existing.athleteIds, ...group.athleteIds]))
+					: group.athleteIds
+			})
+		}
+	}
 
-  return {
-    swimmers: Array.from(swimmerById.values()),
-    programs: [{ trainingGroups: Array.from(groupById.values()) }]
-  }
+	return {
+		swimmers: Array.from(swimmerById.values()),
+		programs: [{ trainingGroups: Array.from(groupById.values()) }]
+	}
 }
 
 async function getGroupingData() {
-  const csrfToken = getCSRF()
-  const agencyId = getAgencyId()
+	const csrfToken = getCSRF()
+	const agencyId = getAgencyId()
 
-  // Both are sniffed (by pageContext.ts) from the page's own outgoing
-  // requests. If neither has fired yet -- e.g. this runs before the site's
-  // own bootstrap calls do -- bail instead of sending a request that's
-  // guaranteed to be rejected or scoped to the wrong agency.
-  if (!csrfToken || !agencyId) {
-    console.warn(
-      "QOL: CSRF token or agency ID not available yet, skipping group fetch"
-    )
-    return
-  }
+	// Both are sniffed (by pageContext.ts) from the page's own outgoing
+	// requests. If neither has fired yet -- e.g. this runs before the site's
+	// own bootstrap calls do -- bail instead of sending a request that's
+	// guaranteed to be rejected or scoped to the wrong agency.
+	if (!csrfToken || !agencyId) {
+		console.warn(
+			"QOL: CSRF token or agency ID not available yet, skipping group fetch"
+		)
+		return
+	}
 
-  try {
-    const meetInfoRes = await fetch(
-      "https://sports.active.com/json/SportsSwimmingMeetSharingService/findMeetsAttendingForAgency?nonhtml=true",
-      {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          "aws-csrftoken": csrfToken,
-          "x-requested-with": "XMLHttpRequest"
-        },
-        body: JSON.stringify({
-          request: {
-            agencyId,
-            includeAll: true
-          }
-        })
-      }
-    )
+	try {
+		const meetInfoRes = await fetch(
+			"https://sports.active.com/json/SportsSwimmingMeetSharingService/findMeetsAttendingForAgency?nonhtml=true",
+			{
+				method: "POST",
+				credentials: "include",
+				headers: {
+					"content-type": "application/json",
+					"aws-csrftoken": csrfToken,
+					"x-requested-with": "XMLHttpRequest"
+				},
+				body: JSON.stringify({
+					request: {
+						agencyId,
+						includeAll: true
+					}
+				})
+			}
+		)
 
-    const meetData: MeetSummary[] = await meetInfoRes.json()
+		const meetData: MeetSummary[] = await meetInfoRes.json()
 
-    const currentYear = new Date().getFullYear()
-    const meetIds = (meetData ?? [])
-      .filter(
-        (meet) =>
-          meet.sportsId &&
-          meet.meetStartDate &&
-          new Date(meet.meetStartDate).getFullYear() === currentYear
-      )
-      .map((meet) => meet.sportsId as string)
+		const currentYear = new Date().getFullYear()
+		const meetIds = (meetData ?? [])
+			.filter(
+				(meet) =>
+					meet.sportsId &&
+					meet.meetStartDate &&
+					new Date(meet.meetStartDate).getFullYear() === currentYear
+			)
+			.map((meet) => meet.sportsId as string)
 
-    if (!meetIds.length) {
-      console.warn(
-        "QOL: no meets found for this agency in the current year, group filter unavailable"
-      )
-      return
-    }
+		if (!meetIds.length) {
+			console.warn(
+				"QOL: no meets found for this agency in the current year, group filter unavailable"
+			)
+			return
+		}
 
-    // Fetched in parallel and via allSettled so one meet's attendance
-    // request failing doesn't blank out the roster from every other meet.
-    const results = await Promise.allSettled(
-      meetIds.map((meetId) => fetchMeetAttendance(meetId, csrfToken))
-    )
+		// Fetched in parallel and via allSettled so one meet's attendance
+		// request failing doesn't blank out the roster from every other meet.
+		const results = await Promise.allSettled(
+			meetIds.map((meetId) => fetchMeetAttendance(meetId, csrfToken))
+		)
 
-    const athleteDataSets: AthleteData[] = []
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        athleteDataSets.push(result.value)
-      } else {
-        console.error(
-          "QOL: failed to load attendance for a meet",
-          result.reason
-        )
-      }
-    }
+		const athleteDataSets: AthleteData[] = []
+		for (const result of results) {
+			if (result.status === "fulfilled") {
+				athleteDataSets.push(result.value)
+			} else {
+				console.error(
+					"QOL: failed to load attendance for a meet",
+					result.reason
+				)
+			}
+		}
 
-    const merged = mergeAthleteData(athleteDataSets)
-    buildRoster(merged, merged.programs?.[0]?.trainingGroups)
-    addGroupingColumn()
-  } catch (err) {
-    console.error("QOL: failed to load training group data", err)
-  }
+		const merged = mergeAthleteData(athleteDataSets)
+		buildRoster(merged, merged.programs?.[0]?.trainingGroups)
+		addGroupingColumn()
+	} catch (err) {
+		console.error("QOL: failed to load training group data", err)
+	}
 }
 
 // Table header to mimic the site's own CSS
 function buildHeader() {
-  const th = document.createElement("th")
+	const th = document.createElement("th")
 
-  th.dataset.field = "Grouping"
-  th.dataset.sortable = "false"
-  th.style.cssText = "width:25%"
-  th.className = "header"
-  th.id = "QOL-Head"
+	th.dataset.field = "Grouping"
+	th.dataset.sortable = "false"
+	th.style.cssText = "width:25%"
+	th.className = "header"
+	th.id = "QOL-Head"
 
-  th.textContent = "Group"
+	th.textContent = "Group"
 
-  return th
+	return th
 }
 
 function buildGroupTag(group: GroupInfo) {
-  const tag = document.createElement("span")
+	const tag = document.createElement("span")
 
-  tag.textContent = group.name
-  tag.title = group.name
-  tag.style.cssText = `
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #fff;
-        background-color: ${group.color};
-        white-space: nowrap;
-    `
+	tag.textContent = group.name
+	tag.title = group.name
+	tag.style.cssText = `
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 10px;
+				font-size: 11px;
+				font-weight: 600;
+				color: #fff;
+				background-color: ${group.color};
+				white-space: nowrap;
+		`
 
-  return tag
+	return tag
 }
 
 // Shared by the native-grid ticker and the synthesized filter table's name
 // links so the two "colored dot" renderings can't drift apart.
 function buildGroupDot(color: string, className?: string) {
-  const dot = document.createElement("span")
-  if (className) dot.className = className
-  dot.style.cssText = `
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: ${color};
-        margin-right: 6px;
-    `
-  return dot
+	const dot = document.createElement("span")
+	if (className) dot.className = className
+	dot.style.cssText = `
+				display: inline-block;
+				width: 8px;
+				height: 8px;
+				border-radius: 50%;
+				background-color: ${color};
+				margin-right: 6px;
+		`
+	return dot
 }
 
 // dark mode's injected stylesheet colors links via `color: ... !important`,
@@ -336,67 +336,67 @@ function buildGroupDot(color: string, className?: string) {
 // link.style.color assignment would be silently ignored whenever dark mode
 // is on. Passing no group clears back to the class/theme's default color.
 function applyLinkGroupColor(link: HTMLAnchorElement, group?: GroupInfo) {
-  if (group) {
-    link.style.setProperty("color", group.color, "important")
-  } else {
-    link.style.removeProperty("color")
-  }
+	if (group) {
+		link.style.setProperty("color", group.color, "important")
+	} else {
+		link.style.removeProperty("color")
+	}
 }
 
 function addTickerToNameCell(nameCell: HTMLTableCellElement, group: GroupInfo) {
-  const link = nameCell.querySelector<HTMLAnchorElement>("a")
-  if (!link) return
+	const link = nameCell.querySelector<HTMLAnchorElement>("a")
+	if (!link) return
 
-  applyLinkGroupColor(link, group)
+	applyLinkGroupColor(link, group)
 
-  if (link.querySelector(".qol-ticker")) return
+	if (link.querySelector(".qol-ticker")) return
 
-  const dot = buildGroupDot(group.color, "qol-ticker")
-  dot.title = group.name
+	const dot = buildGroupDot(group.color, "qol-ticker")
+	dot.title = group.name
 
-  link.prepend(dot)
+	link.prepend(dot)
 }
 
 function ensureGroupCell(row: HTMLTableRowElement) {
-  let cell = row.querySelector<HTMLTableCellElement>(
-    ":scope > td.qol-group-cell"
-  )
+	let cell = row.querySelector<HTMLTableCellElement>(
+		":scope > td.qol-group-cell"
+	)
 
-  if (!cell) {
-    cell = document.createElement("td")
-    cell.className = "qol-group-cell"
-    cell.style.width = "25%"
-    row.appendChild(cell)
-  }
+	if (!cell) {
+		cell = document.createElement("td")
+		cell.className = "qol-group-cell"
+		cell.style.width = "25%"
+		row.appendChild(cell)
+	}
 
-  return cell
+	return cell
 }
 
 // Cross-references each row's rendered name against the training group data
 // (matched by athlete ID upstream, keyed here by normalized name) and injects
 // a colored ticker dot next to the name plus a group tag cell.
 function tagRows() {
-  const rows = document.querySelectorAll<HTMLTableRowElement>(
-    "#dataGridAthlete > tbody > tr"
-  )
+	const rows = document.querySelectorAll<HTMLTableRowElement>(
+		"#dataGridAthlete > tbody > tr"
+	)
 
-  rows.forEach((row) => {
-    // Always keep row cell count in sync with the injected header column.
-    const groupCell = ensureGroupCell(row)
+	rows.forEach((row) => {
+		// Always keep row cell count in sync with the injected header column.
+		const groupCell = ensureGroupCell(row)
 
-    if (!nameToGroup || row.dataset.qolGroupResolved) return
+		if (!nameToGroup || row.dataset.qolGroupResolved) return
 
-    const nameCell = row.querySelector<HTMLTableCellElement>("td:nth-child(2)")
-    const rawName = nameCell?.querySelector("a")?.textContent ?? ""
-    const group = nameToGroup.get(normalizeName(rawName))
+		const nameCell = row.querySelector<HTMLTableCellElement>("td:nth-child(2)")
+		const rawName = nameCell?.querySelector("a")?.textContent ?? ""
+		const group = nameToGroup.get(normalizeName(rawName))
 
-    if (group) {
-      groupCell.appendChild(buildGroupTag(group))
-      if (nameCell) addTickerToNameCell(nameCell, group)
-    }
+		if (group) {
+			groupCell.appendChild(buildGroupTag(group))
+			if (nameCell) addTickerToNameCell(nameCell, group)
+		}
 
-    row.dataset.qolGroupResolved = "1"
-  })
+		row.dataset.qolGroupResolved = "1"
+	})
 }
 
 const FILTER_BAR_ID = "qol-group-filter-bar"
@@ -414,118 +414,118 @@ const VIEW_PARENT_TOGGLE_ID = "parentFilter"
 // page's own JS world) to call the page's own navigate function -- the same
 // call the native peopleDetail links make.
 function navigateToPeopleDetail(spid: string) {
-  window.dispatchEvent(new CustomEvent(NAVIGATE_EVENT, { detail: { spid } }))
+	window.dispatchEvent(new CustomEvent(NAVIGATE_EVENT, { detail: { spid } }))
 }
 
 // Rows synthesized for the group filter only carry what the roster data
 // gives us (name/age/gender/group) -- the native grid's swim-ID, dive
 // certification, and per-row action buttons aren't available here.
 function buildFilterTableRow(entry: RosterEntry) {
-  const tr = document.createElement("tr")
+	const tr = document.createElement("tr")
 
-  const nameTd = document.createElement("td")
-  nameTd.style.width = "25%"
+	const nameTd = document.createElement("td")
+	nameTd.style.width = "25%"
 
-  const nameLink = document.createElement("a")
-  nameLink.className = "fndArch-LinkBlueOnLightGray"
-  nameLink.href = "#"
-  nameLink.style.cursor = "pointer"
-  nameLink.addEventListener("click", (e) => {
-    e.preventDefault()
-    navigateToPeopleDetail(entry.id)
-  })
+	const nameLink = document.createElement("a")
+	nameLink.className = "fndArch-LinkBlueOnLightGray"
+	nameLink.href = "#"
+	nameLink.style.cursor = "pointer"
+	nameLink.addEventListener("click", (e) => {
+		e.preventDefault()
+		navigateToPeopleDetail(entry.id)
+	})
 
-  if (entry.group) {
-    nameLink.appendChild(buildGroupDot(entry.group.color))
-  }
-  applyLinkGroupColor(nameLink, entry.group)
-  nameLink.appendChild(
-    document.createTextNode(`${entry.firstName} ${entry.lastName}`)
-  )
+	if (entry.group) {
+		nameLink.appendChild(buildGroupDot(entry.group.color))
+	}
+	applyLinkGroupColor(nameLink, entry.group)
+	nameLink.appendChild(
+		document.createTextNode(`${entry.firstName} ${entry.lastName}`)
+	)
 
-  nameTd.appendChild(nameLink)
+	nameTd.appendChild(nameLink)
 
-  const ageTd = document.createElement("td")
-  ageTd.style.width = "20%"
-  ageTd.textContent =
-    entry.age != null ? `${entry.age} (${formatDob(entry.dob)})` : ""
+	const ageTd = document.createElement("td")
+	ageTd.style.width = "20%"
+	ageTd.textContent =
+		entry.age != null ? `${entry.age} (${formatDob(entry.dob)})` : ""
 
-  const genderTd = document.createElement("td")
-  genderTd.style.width = "15%"
-  genderTd.textContent = formatGender(entry.gender)
+	const genderTd = document.createElement("td")
+	genderTd.style.width = "15%"
+	genderTd.textContent = formatGender(entry.gender)
 
-  const groupTd = document.createElement("td")
-  groupTd.style.width = "25%"
-  if (entry.group) groupTd.appendChild(buildGroupTag(entry.group))
+	const groupTd = document.createElement("td")
+	groupTd.style.width = "25%"
+	if (entry.group) groupTd.appendChild(buildGroupTag(entry.group))
 
-  tr.append(nameTd, ageTd, genderTd, groupTd)
-  return tr
+	tr.append(nameTd, ageTd, genderTd, groupTd)
+	return tr
 }
 
 function buildFilterTable() {
-  const table = document.createElement("table")
-  table.id = FILTER_TABLE_ID
-  table.className = "table table-hover"
-  table.style.width = "100%"
-  table.style.display = "none"
+	const table = document.createElement("table")
+	table.id = FILTER_TABLE_ID
+	table.className = "table table-hover"
+	table.style.width = "100%"
+	table.style.display = "none"
 
-  const thead = document.createElement("thead")
-  const headRow = document.createElement("tr")
+	const thead = document.createElement("thead")
+	const headRow = document.createElement("tr")
 
-  for (const [label, width] of [
-    ["Name", "25%"],
-    ["Age (birthday)", "20%"],
-    ["Gender", "15%"],
-    ["Group", "25%"]
-  ] as const) {
-    const th = document.createElement("th")
-    th.textContent = label
-    th.className = "header"
-    th.style.cssText = `width:${width}`
-    headRow.appendChild(th)
-  }
+	for (const [label, width] of [
+		["Name", "25%"],
+		["Age (birthday)", "20%"],
+		["Gender", "15%"],
+		["Group", "25%"]
+	] as const) {
+		const th = document.createElement("th")
+		th.textContent = label
+		th.className = "header"
+		th.style.cssText = `width:${width}`
+		headRow.appendChild(th)
+	}
 
-  thead.appendChild(headRow)
-  table.append(thead, document.createElement("tbody"))
+	thead.appendChild(headRow)
+	table.append(thead, document.createElement("tbody"))
 
-  return table
+	return table
 }
 
 function renderFilteredRows(groupId: string) {
-  const tbody = document.querySelector(`#${FILTER_TABLE_ID} > tbody`)
-  if (!tbody) return
+	const tbody = document.querySelector(`#${FILTER_TABLE_ID} > tbody`)
+	if (!tbody) return
 
-  tbody.replaceChildren()
+	tbody.replaceChildren()
 
-  for (const entry of roster.filter((r) => r.group?.id === groupId)) {
-    tbody.appendChild(buildFilterTableRow(entry))
-  }
+	for (const entry of roster.filter((r) => r.group?.id === groupId)) {
+		tbody.appendChild(buildFilterTableRow(entry))
+	}
 }
 
 function setGroupFilter(groupId: string) {
-  const nativeTable =
-    document.querySelector<HTMLTableElement>("#dataGridAthlete")
-  const filterTable = document.getElementById(
-    FILTER_TABLE_ID
-  ) as HTMLTableElement | null
-  if (!nativeTable || !filterTable) return
+	const nativeTable =
+		document.querySelector<HTMLTableElement>("#dataGridAthlete")
+	const filterTable = document.getElementById(
+		FILTER_TABLE_ID
+	) as HTMLTableElement | null
+	if (!nativeTable || !filterTable) return
 
-  // The synthesized filter table always renders every matching swimmer in
-  // one page, so the native grid's pager (which only ever paginates the
-  // native grid) is meaningless while it's showing -- hide it alongside.
-  const pagingBar = document.getElementById("pagingBar")
+	// The synthesized filter table always renders every matching swimmer in
+	// one page, so the native grid's pager (which only ever paginates the
+	// native grid) is meaningless while it's showing -- hide it alongside.
+	const pagingBar = document.getElementById("pagingBar")
 
-  if (!groupId) {
-    nativeTable.style.display = ""
-    filterTable.style.display = "none"
-    if (pagingBar) pagingBar.style.display = ""
-    return
-  }
+	if (!groupId) {
+		nativeTable.style.display = ""
+		filterTable.style.display = "none"
+		if (pagingBar) pagingBar.style.display = ""
+		return
+	}
 
-  renderFilteredRows(groupId)
-  nativeTable.style.display = "none"
-  filterTable.style.display = "table"
-  if (pagingBar) pagingBar.style.display = "none"
+	renderFilteredRows(groupId)
+	nativeTable.style.display = "none"
+	filterTable.style.display = "table"
+	if (pagingBar) pagingBar.style.display = "none"
 }
 
 // Guards against a stale filter view surviving a peopleDetail round trip
@@ -535,71 +535,71 @@ function setGroupFilter(groupId: string) {
 // the freshly re-rendered (unfiltered) native grid, and both show at once.
 // Called on every fresh entry to the people page so it always starts on "All".
 function resetGroupFilterUI() {
-  const select = document.getElementById(
-    FILTER_SELECT_ID
-  ) as HTMLSelectElement | null
-  if (select) select.value = ""
+	const select = document.getElementById(
+		FILTER_SELECT_ID
+	) as HTMLSelectElement | null
+	if (select) select.value = ""
 
-  setGroupFilter("")
+	setGroupFilter("")
 }
 
 function buildFilterBar() {
-  const bar = document.createElement("div")
-  bar.id = FILTER_BAR_ID
-  bar.style.cssText =
-    "display: flex; align-items: center; gap: 8px; margin-bottom: 10px;"
+	const bar = document.createElement("div")
+	bar.id = FILTER_BAR_ID
+	bar.style.cssText =
+		"display: flex; align-items: center; gap: 8px; margin-bottom: 10px;"
 
-  const label = document.createElement("label")
-  label.textContent = "Filter by group:"
-  label.style.fontWeight = "600"
-  label.htmlFor = FILTER_SELECT_ID
+	const label = document.createElement("label")
+	label.textContent = "Filter by group:"
+	label.style.fontWeight = "600"
+	label.htmlFor = FILTER_SELECT_ID
 
-  const select = document.createElement("select")
-  select.id = FILTER_SELECT_ID
+	const select = document.createElement("select")
+	select.id = FILTER_SELECT_ID
 
-  const allOption = document.createElement("option")
-  allOption.value = ""
-  allOption.textContent = "All"
-  select.appendChild(allOption)
+	const allOption = document.createElement("option")
+	allOption.value = ""
+	allOption.textContent = "All"
+	select.appendChild(allOption)
 
-  for (const group of groupList) {
-    const option = document.createElement("option")
-    option.value = group.id
-    option.textContent = group.name
-    select.appendChild(option)
-  }
+	for (const group of groupList) {
+		const option = document.createElement("option")
+		option.value = group.id
+		option.textContent = group.name
+		select.appendChild(option)
+	}
 
-  select.addEventListener("change", () => setGroupFilter(select.value))
+	select.addEventListener("change", () => setGroupFilter(select.value))
 
-  bar.append(label, select)
-  return bar
+	bar.append(label, select)
+	return bar
 }
 
 // Injected once group data is available; the site paginates the native grid
 // with no page-size control, so filtering by group is done against our own
 // synthesized table instead of the native (only 20-rows-at-a-time) one.
 function ensureGroupFilterUI() {
-  if (!groupList.length) return
-  if (document.getElementById(FILTER_BAR_ID)) return
+	if (!groupList.length) return
+	if (document.getElementById(FILTER_BAR_ID)) return
 
-  const table = document.querySelector<HTMLTableElement>("#dataGridAthlete")
-  if (!table || !table.parentElement) return
+	const table = document.querySelector<HTMLTableElement>("#dataGridAthlete")
+	if (!table || !table.parentElement) return
 
-  table.parentElement.insertBefore(buildFilterBar(), table)
-  table.parentElement.insertBefore(buildFilterTable(), table)
+	table.parentElement.insertBefore(buildFilterBar(), table)
+	table.parentElement.insertBefore(buildFilterTable(), table)
 }
 
 function setFilterBarVisible(visible: boolean) {
-  const bar = document.getElementById(FILTER_BAR_ID)
-  if (bar) bar.style.display = visible ? "" : "none"
+	const bar = document.getElementById(FILTER_BAR_ID)
+	if (bar) bar.style.display = visible ? "" : "none"
 }
 
 function isParentViewActive(): boolean {
-  return (
-    document
-      .getElementById(VIEW_PARENT_TOGGLE_ID)
-      ?.classList.contains("selectedLabel") ?? false
-  )
+	return (
+		document
+			.getElementById(VIEW_PARENT_TOGGLE_ID)
+			?.classList.contains("selectedLabel") ?? false
+	)
 }
 
 // Parents is a completely different grid (#dataGridParent) -- neither the
@@ -608,21 +608,21 @@ function isParentViewActive(): boolean {
 // the native table via setGroupFilter(""), which is exactly wrong here --
 // that's what caused the swimmer table to reappear alongside Parents.)
 function hideNativeTableForParentView() {
-  const select = document.getElementById(
-    FILTER_SELECT_ID
-  ) as HTMLSelectElement | null
-  if (select) select.value = ""
+	const select = document.getElementById(
+		FILTER_SELECT_ID
+	) as HTMLSelectElement | null
+	if (select) select.value = ""
 
-  const nativeTable =
-    document.querySelector<HTMLTableElement>("#dataGridAthlete")
-  const filterTable = document.getElementById(
-    FILTER_TABLE_ID
-  ) as HTMLTableElement | null
-  const pagingBar = document.getElementById("pagingBar")
+	const nativeTable =
+		document.querySelector<HTMLTableElement>("#dataGridAthlete")
+	const filterTable = document.getElementById(
+		FILTER_TABLE_ID
+	) as HTMLTableElement | null
+	const pagingBar = document.getElementById("pagingBar")
 
-  if (nativeTable) nativeTable.style.display = "none"
-  if (filterTable) filterTable.style.display = "none"
-  if (pagingBar) pagingBar.style.display = "none"
+	if (nativeTable) nativeTable.style.display = "none"
+	if (filterTable) filterTable.style.display = "none"
+	if (pagingBar) pagingBar.style.display = "none"
 }
 
 // The group filter is keyed off swimmer names/IDs, so it's meaningless once
@@ -631,44 +631,44 @@ function hideNativeTableForParentView() {
 // peopleDetail back-navigation) and hide the dropdown entirely while Parents
 // is active; restore it when switching back to Athletes.
 function syncGroupFilterToView() {
-  const parentView = isParentViewActive()
+	const parentView = isParentViewActive()
 
-  if (parentView) {
-    hideNativeTableForParentView()
-  } else {
-    resetGroupFilterUI()
-  }
+	if (parentView) {
+		hideNativeTableForParentView()
+	} else {
+		resetGroupFilterUI()
+	}
 
-  setFilterBarVisible(!parentView)
+	setFilterBarVisible(!parentView)
 }
 
 // Hooked once the sidebar toggle exists; also runs an initial sync in case
 // the page loaded with Parents already selected.
 function ensureViewToggleHook() {
-  const parentToggle = document.getElementById(VIEW_PARENT_TOGGLE_ID)
-  const athleteToggle = document.getElementById(VIEW_ATHLETE_TOGGLE_ID)
-  if (!parentToggle || !athleteToggle) return
-  if (parentToggle.dataset.qolHooked) return
+	const parentToggle = document.getElementById(VIEW_PARENT_TOGGLE_ID)
+	const athleteToggle = document.getElementById(VIEW_ATHLETE_TOGGLE_ID)
+	if (!parentToggle || !athleteToggle) return
+	if (parentToggle.dataset.qolHooked) return
 
-  parentToggle.dataset.qolHooked = "1"
-  athleteToggle.dataset.qolHooked = "1"
+	parentToggle.dataset.qolHooked = "1"
+	athleteToggle.dataset.qolHooked = "1"
 
-  parentToggle.addEventListener("click", syncGroupFilterToView)
-  athleteToggle.addEventListener("click", syncGroupFilterToView)
+	parentToggle.addEventListener("click", syncGroupFilterToView)
+	athleteToggle.addEventListener("click", syncGroupFilterToView)
 
-  syncGroupFilterToView()
+	syncGroupFilterToView()
 }
 
 function addGroupingColumn() {
-  // Inject group header (guarded so re-running on every mutation doesn't duplicate it)
-  const thead = document.querySelector("#dataGridAthlete > thead > tr")
-  if (thead && !document.querySelector("#QOL-Head")) {
-    thead.appendChild(buildHeader())
-  }
+	// Inject group header (guarded so re-running on every mutation doesn't duplicate it)
+	const thead = document.querySelector("#dataGridAthlete > thead > tr")
+	if (thead && !document.querySelector("#QOL-Head")) {
+		thead.appendChild(buildHeader())
+	}
 
-  ensureGroupFilterUI()
-  ensureViewToggleHook()
-  tagRows()
+	ensureGroupFilterUI()
+	ensureViewToggleHook()
+	tagRows()
 }
 
 // Tracks the observer across init() calls so re-navigating to the people
@@ -677,21 +677,21 @@ function addGroupingColumn() {
 let pageObserver: MutationObserver | null = null
 
 function init() {
-  pageObserver?.disconnect()
-  pageObserver = null
+	pageObserver?.disconnect()
+	pageObserver = null
 
-  if (!window.location.hash.includes("/people/peopleHome")) return
+	if (!window.location.hash.includes("/people/peopleHome")) return
 
-  resetGroupFilterUI()
+	resetGroupFilterUI()
 
-  pageObserver = new MutationObserver(() => addGroupingColumn())
-  pageObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  })
+	pageObserver = new MutationObserver(() => addGroupingColumn())
+	pageObserver.observe(document.body, {
+		childList: true,
+		subtree: true
+	})
 
-  getGroupingData()
-  addGroupingColumn()
+	getGroupingData()
+	addGroupingColumn()
 }
 
 init()
