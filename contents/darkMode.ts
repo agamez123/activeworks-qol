@@ -10,6 +10,7 @@ export const config: PlasmoCSConfig = {
 const STYLE_ID = "qol-dark-mode"
 const TRANSITION_STYLE_ID = "qol-dark-mode-transition"
 const ROW_STRIPE_STYLE_ID = "qol-row-stripe"
+const LAYOUT_STYLE_ID = "qol-layout-padding"
 
 // Row striping for readability - kept in its own never-removed style tag so
 // it applies in light mode too. The dark-mode stylesheet's own row rules are
@@ -17,6 +18,18 @@ const ROW_STRIPE_STYLE_ID = "qol-row-stripe"
 const rowStripeCss = `
   tbody tr:nth-child(even) td {
     background-color: #f0f0f0 !important;
+  }
+`
+
+// The site's own CSS zeroes out this column's side padding
+// (.active-swimming-components-PageLayout-wrapTableColumn { padding-left:0;
+// padding-right:0 }), which is the main content column on every page (Home,
+// People, etc). With no padding, headings/table text sit flush against the
+// sidebar divider. Kept in its own never-removed style tag so it applies in
+// light mode too.
+const layoutPaddingCss = `
+  .active-swimming-components-PageLayout-wrapTableColumn {
+    padding: 0 20px !important;
   }
 `
 
@@ -58,8 +71,12 @@ const transitionCss = `
   tbody tr,
   tbody tr.selected,
   .sidebar a,
-  .pagination > li > span {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out !important;
+  .pagination > li > span,
+  .highcharts-background,
+  .header.CollapseAll,
+  .header.Itemheader,
+  .sectionTitle {
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out, fill 0.15s ease-in-out !important;
   }
 `
 
@@ -175,6 +192,66 @@ const css = `
   .pagination > li > span:hover {
     background-color: var(--qol-bg-hover) !important;
   }
+
+  /* Highcharts pie/donut charts (e.g. the Meet Attendance summary) render
+     their own background rect with a hardcoded white fill. */
+  .highcharts-background {
+    fill: var(--qol-bg-elevated) !important;
+  }
+
+  /* MeetEntryByEvent: sidebar filter section headers ("Collapse all",
+     "Event gender", "Event age group", etc.) keep the site's own hardcoded
+     background/text regardless of theme, so they don't follow dark mode. */
+  .header.CollapseAll,
+  .header.Itemheader,
+  .eventByEvent,
+  .eventTitle {
+    background: var(--qol-bg-elevated) !important;
+    color: var(--qol-text) !important;
+  }
+
+  .session {
+    background-color: var(--qol-bg-alt) !important;
+  }
+
+  .session .title {
+    color: var(--qol-text) !important;
+  }
+
+  .header.Itemheader:hover {
+    background: var(--qol-bg-hover) !important;
+  }
+
+  .sectionTitle {
+    color: var(--qol-text) !important;
+  }
+
+  /* Modals render into a portal (.modal-root) appended to <body> with the
+     site's own hardcoded white background/dark text, so they don't inherit
+     the dark-mode rules above. */
+  .modal-content,
+  .modal-box {
+    background-color: var(--qol-bg-elevated) !important;
+  }
+
+  .modal-header,
+  .modal-footer {
+    background-color: var(--qol-bg-elevated) !important;
+    color: var(--qol-text) !important;
+  }
+
+  .modal-title,
+  .modal-body {
+    color: var(--qol-text) !important;
+  }
+
+  .modal-close {
+    color: var(--qol-text) !important;
+  }
+
+  .modal-lists {
+    border-color: var(--qol-border) !important;
+  }
 `
 
 // Optimistically on so there's no flash-of-light for the common case;
@@ -199,8 +276,18 @@ function injectRowStripeStyle() {
   ;(document.head || document.documentElement).appendChild(style)
 }
 
+function injectLayoutPaddingStyle() {
+  if (document.getElementById(LAYOUT_STYLE_ID)) return
+
+  const style = document.createElement("style")
+  style.id = LAYOUT_STYLE_ID
+  style.textContent = layoutPaddingCss
+  ;(document.head || document.documentElement).appendChild(style)
+}
+
 function injectStyle() {
   injectRowStripeStyle()
+  injectLayoutPaddingStyle()
   injectTransitionStyle()
 
   if (document.getElementById(STYLE_ID)) return
