@@ -1,8 +1,8 @@
-# Activeworks QOL
+# ASM Toolkit
 
 A browser extension that adds quality-of-life improvements to
-[ACTIVE Network's Swimming portal](https://sports.active.com/) (Activeworks),
-for club staff managing swimmers.
+[Active Swim Manager](https://sports.active.com/), for club staff managing
+swimmers.
 
 ## Features
 

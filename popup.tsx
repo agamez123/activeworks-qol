@@ -36,9 +36,9 @@ function IndexPopup() {
 				}}>
 				<img src={icon} alt="" width={28} height={28} />
 				<div>
-					<div style={{ fontSize: 15, fontWeight: 600 }}>Activeworks QOL</div>
+					<div style={{ fontSize: 15, fontWeight: 600 }}>ASM Toolkit</div>
 					<div style={{ fontSize: 12, color: "#666" }}>
-						Quality of life tweaks for Activeworks
+						Quality of life tweaks for Active Swim Manager
 					</div>
 				</div>
 			</div>

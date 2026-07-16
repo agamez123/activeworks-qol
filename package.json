@@ -1,8 +1,8 @@
 {
-	"name": "activeworks-qol",
-	"displayName": "Activeworks qol",
+	"name": "asm-toolkit",
+	"displayName": "ASM Toolkit",
 	"version": "0.0.1",
-	"description": "Quality of life + other useful features for Activeworks.",
+	"description": "Quality of life + other useful features for Active Swim Manager.",
 	"author": "Ren Briggs <renbriggs10@gmail.com>",
 	"scripts": {
 		"dev": "plasmo dev",
@@ -10,6 +10,7 @@
 		"package": "plasmo package"
 	},
 	"dependencies": {
+		"papaparse": "^5.5.4",
 		"plasmo": "0.83.0",
 		"react": "18.2.0",
 		"react-dom": "18.2.0"
@@ -18,6 +19,7 @@
 		"@ianvs/prettier-plugin-sort-imports": "4.1.1",
 		"@types/chrome": "0.0.258",
 		"@types/node": "20.11.5",
+		"@types/papaparse": "^5.5.2",
 		"@types/react": "18.2.48",
 		"@types/react-dom": "18.2.18",
 		"eslint": "^10.5.0",
