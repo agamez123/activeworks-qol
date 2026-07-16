@@ -4,6 +4,8 @@ import { DARK_MODE_STORAGE_KEY } from "~lib/storage"
 
 export const config: PlasmoCSConfig = {
 	matches: ["*://sports.active.com/*"],
+	exclude_matches: ["*://sports.active.com/ReportServer/*"],
+	all_frames: true,
 	run_at: "document_start"
 }
 
@@ -57,6 +59,7 @@ const transitionCss = `
 	#programDetail,
 	.item-header,
 	.athlete-info,
+	.elgDropDownLabel,
 	a,
 	.fndArch-LinkBlueOnLightGray,
 	.btn,
@@ -75,7 +78,10 @@ const transitionCss = `
 	.highcharts-background,
 	.header.CollapseAll,
 	.header.Itemheader,
-	.sectionTitle {
+	.sectionTitle,
+	.accordion,
+	.accordion h6,
+	.accordion h6 tbody tr td {
 		transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out, fill 0.15s ease-in-out !important;
 	}
 `
@@ -113,8 +119,20 @@ const css = `
 	#headerText,
 	#programDetail,
 	.item-header,
-	.athlete-info {
+	.athlete-info,
+	.elgDropDownLabel {
 		color: var(--qol-text) !important;
+	}
+
+	.ageRangeGroup .inputContent {
+		background-color: unset !important;
+	}
+
+	/* The SSRS report iframe (excluded from dark mode) is transparent by
+		 default, so the dark page background behind it shows through until
+		 the report's own white content fills it. */
+	#reportServiceContainer {
+		background-color: #ffffff !important;
 	}
 
 	a,
@@ -205,13 +223,33 @@ const css = `
 	.header.CollapseAll,
 	.header.Itemheader,
 	.eventByEvent,
-	.eventTitle {
+	.eventTitle,
+    .prePanel {
 		background: var(--qol-bg-elevated) !important;
 		color: var(--qol-text) !important;
 	}
 
 	.session {
 		background-color: var(--qol-bg-alt) !important;
+	}
+
+	/* MeetEntryByName: each swimmer's collapsible header keeps the site's own
+		 hardcoded light-gray background (inline style="background-color:#ebebeb")
+		 and border regardless of theme. */
+	.accordion h6 {
+		background-color: var(--qol-bg-elevated) !important;
+	}
+
+	.accordion {
+		border-color: var(--qol-border) !important;
+	}
+
+	/* The swimmer-info table nested inside the header (div.accordionRenderer.layout)
+		 picks up the row-striping background from the generic tbody rules above,
+		 which is a different shade than the header's own background, leaving a
+		 visible seam. Force it to match the header. */
+	.accordion h6 tbody tr td {
+		background-color: var(--qol-bg-elevated) !important;
 	}
 
 	.session .title {
@@ -240,8 +278,12 @@ const css = `
 		color: var(--qol-text) !important;
 	}
 
-	.modal-title,
+	.modal-title {
+		color: var(--qol-text) !important;
+	}
+
 	.modal-body {
+		background-color: var(--qol-bg-elevated) !important;
 		color: var(--qol-text) !important;
 	}
 
@@ -251,6 +293,12 @@ const css = `
 
 	.modal-lists {
 		border-color: var(--qol-border) !important;
+	}
+
+	/* MeetEntryByEvent: the "eligible events" popup hardcodes the swimmer's
+		 name to black text, which is unreadable against the dark modal body. */
+	#eligibleEventsPopup .swimmerName {
+		color: var(--qol-text) !important;
 	}
 `
 
