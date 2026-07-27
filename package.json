@@ -1,7 +1,7 @@
 {
 	"name": "asm-toolkit",
 	"displayName": "ASM Toolkit",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Quality of life + other useful features for Active Swim Manager.",
 	"author": "Ren Briggs <renbriggs10@gmail.com>",
 	"scripts": {

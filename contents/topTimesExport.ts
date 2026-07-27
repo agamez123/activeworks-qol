@@ -16,6 +16,8 @@ const BAR_ID = "qol-times-export-bar"
 const GROUPS_ID = "qol-times-export-groups"
 const ALL_TIMES_ID = "qol-times-export-alltimes"
 const STATUS_ID = "qol-times-export-status"
+const BY_NAME_LINK_STYLE_ID = "qol-toptimes-bynamelink-style"
+const WIZARD_LISTITEM_STYLE_ID = "qol-toptimes-wizard-listitem-style"
 
 const GROUP_FETCH_RETRY_MS = 1500
 const GROUP_FETCH_MAX_TRIES = 20
@@ -23,6 +25,41 @@ const GROUP_FETCH_MAX_TRIES = 20
 let groupData: TrainingGroupData | null = null
 let groupFetchTries = 0
 let groupFetchTimer: number | null = null
+
+// The wizard's program list truncates long program names with an ellipsis
+// (site CSS sets white-space: nowrap + text-overflow: ellipsis), so wrap
+// instead of clipping them.
+function injectWizardListItemStyle() {
+	if (document.getElementById(WIZARD_LISTITEM_STYLE_ID)) return
+
+	const style = document.createElement("style")
+	style.id = WIZARD_LISTITEM_STYLE_ID
+	style.textContent = `
+		.TopTimesReportWizard .panel .listItem {
+			white-space: normal !important;
+		}
+	`
+	;(document.head || document.documentElement).appendChild(style)
+}
+
+// The Reports home page's "Top Times By Name" link is the entry point for
+// the tailored group export above, so it's called out in green/bold to draw
+// the eye away from the other report links.
+function injectByNameLinkStyle() {
+	if (document.getElementById(BY_NAME_LINK_STYLE_ID)) return
+
+	const style = document.createElement("style")
+	style.id = BY_NAME_LINK_STYLE_ID
+	style.textContent = `
+		#viewTopTimeRankingByNameLink {
+			color: #2e9e4a !important;
+			font-weight: 700 !important;
+			font-size: 16px !important;
+            margin-top: 4px !important;
+		}
+	`
+	;(document.head || document.documentElement).appendChild(style)
+}
 
 function isTopTimesByNamePage(): boolean {
 	const hash = window.location.hash
@@ -300,6 +337,16 @@ function init() {
 }
 
 init()
+injectByNameLinkStyle()
+injectWizardListItemStyle()
+
+// The site's SPA bootstrap process occasionally rebuilds <head> and drops
+// injected stylesheets (see the equivalent observer in darkMode.ts), so
+// reapply these styles whenever that happens.
+new MutationObserver(() => {
+	injectByNameLinkStyle()
+	injectWizardListItemStyle()
+}).observe(document.documentElement, { childList: true, subtree: true })
 
 // handle SPA navigation changes
 window.addEventListener("hashchange", init)
