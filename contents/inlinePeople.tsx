@@ -1,7 +1,9 @@
 import type { PlasmoCSConfig } from "plasmo"
 
+import { TRAINING_GROUPS_STORAGE_KEY } from "~lib/storage"
 import {
-	fetchTrainingGroups,
+	buildIndexes,
+	loadTrainingGroupsStore,
 	normalizeName,
 	type GroupInfo,
 	type RosterEntry
@@ -33,13 +35,20 @@ let nameToGroup: Map<string, GroupInfo> | null = null
 let roster: RosterEntry[] = []
 let groupList: GroupInfo[] = []
 
+// Bumped every time grouping data is (re)loaded from storage, so tagRows()
+// can tell "already tagged with current data" apart from "tagged with data
+// that's since changed" (e.g. the user moved a swimmer via the popup while
+// this page is open) without re-tagging every row on every DOM mutation.
+let dataGeneration = 0
+
 async function getGroupingData() {
-	const data = await fetchTrainingGroups()
-	if (!data) return
+	const store = await loadTrainingGroupsStore()
+	const data = buildIndexes(store)
 
 	nameToGroup = data.nameToGroup
 	roster = data.roster
 	groupList = data.groups
+	dataGeneration++
 
 	addGroupingColumn()
 }
@@ -135,6 +144,20 @@ function ensureGroupCell(row: HTMLTableRowElement) {
 	return cell
 }
 
+// Clears a previously-applied tag/ticker so a row can be re-tagged against
+// fresher data (e.g. the swimmer was moved to a different group).
+function clearGroupTag(row: HTMLTableRowElement) {
+	const groupCell = row.querySelector<HTMLTableCellElement>(
+		":scope > td.qol-group-cell"
+	)
+	groupCell?.replaceChildren()
+
+	const nameCell = row.querySelector<HTMLTableCellElement>("td:nth-child(2)")
+	const link = nameCell?.querySelector<HTMLAnchorElement>("a")
+	link?.querySelector(".qol-ticker")?.remove()
+	if (link) applyLinkGroupColor(link, undefined)
+}
+
 // Cross-references each row's rendered name against the training group data
 // (matched by athlete ID upstream, keyed here by normalized name) and injects
 // a colored ticker dot next to the name plus a group tag cell.
@@ -147,7 +170,10 @@ function tagRows() {
 		// Always keep row cell count in sync with the injected header column.
 		const groupCell = ensureGroupCell(row)
 
-		if (!nameToGroup || row.dataset.qolGroupResolved) return
+		if (!nameToGroup) return
+		if (row.dataset.qolGroupResolved === String(dataGeneration)) return
+
+		clearGroupTag(row)
 
 		const nameCell = row.querySelector<HTMLTableCellElement>("td:nth-child(2)")
 		const rawName = nameCell?.querySelector("a")?.textContent ?? ""
@@ -158,7 +184,7 @@ function tagRows() {
 			if (nameCell) addTickerToNameCell(nameCell, group)
 		}
 
-		row.dataset.qolGroupResolved = "1"
+		row.dataset.qolGroupResolved = String(dataGeneration)
 	})
 }
 
@@ -461,3 +487,17 @@ init()
 
 // handle SPA navigation changes
 window.addEventListener("hashchange", init)
+
+// The popup can sync/rename/delete groups and move swimmers around while
+// this page is already open. Rebuild the filter bar/table from scratch
+// (rather than patching it) so a renamed/added/removed group is reflected
+// in its <select> options too, not just the row tags.
+chrome.storage.onChanged.addListener((changes, area) => {
+	if (area !== "local" || !changes[TRAINING_GROUPS_STORAGE_KEY]) return
+	if (!window.location.hash.includes("/people/peopleHome")) return
+
+	document.getElementById(FILTER_BAR_ID)?.remove()
+	document.getElementById(FILTER_TABLE_ID)?.remove()
+
+	getGroupingData()
+})

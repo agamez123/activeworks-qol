@@ -1,51 +1,61 @@
-import { getAgencyId, getCSRF } from "~contents/pageContext"
+import { TRAINING_GROUPS_STORAGE_KEY } from "~lib/storage"
 
-export interface TrainingGroup {
-	athleteIds: string[]
-	name: string
-	id: string
-}
+// This module intentionally has no dependency on ~contents/pageContext (or
+// anything else that touches window.fetch/XHR) - it's imported directly by
+// the popup for local group/roster editing, and pulling in pageContext's
+// page-sniffing side effects there would be both wrong and wasteful. The
+// site-fetching sync logic lives in ~lib/trainingGroupsSync instead, and is
+// only ever imported by the content script that runs it.
 
-export interface SwimmerEntry {
-	swimmer?: {
-		id: string
-		firstName: string
-		lastName: string
-		age?: number
-		dob?: string
-		gender?: string
-	}
-}
+// ---- Persisted shapes (chrome.storage.local) ----
 
-export interface AthleteData {
-	swimmers?: SwimmerEntry[]
-	programs?: { trainingGroups: TrainingGroup[] }[]
-}
-
-interface MeetSummary {
-	sportsId?: string
-	meetStartDate?: string
-}
-
-export interface GroupInfo {
+export interface StoredGroup {
 	id: string
 	name: string
 	color: string
+	// User-created groups have no corresponding group on the site.
+	custom?: boolean
 }
 
-export interface RosterEntry {
+export interface StoredSwimmer {
 	id: string
 	firstName: string
 	lastName: string
 	age?: number
 	dob?: string
 	gender?: string
-	group?: GroupInfo
+	groupId: string | null
+	// Set once the user explicitly assigns/unassigns this swimmer. Manual
+	// assignments always win over whatever the site reports on the next sync.
+	manualGroup?: boolean
+}
+
+export interface TrainingGroupsStore {
+	groups: StoredGroup[]
+	roster: StoredSwimmer[]
+	// Site-sourced group ids the user has deleted locally, so a later sync
+	// doesn't resurrect them.
+	deletedApiGroupIds: string[]
+	lastSyncedAt: number | null
+}
+
+export const EMPTY_TRAINING_GROUPS_STORE: TrainingGroupsStore = {
+	groups: [],
+	roster: [],
+	deletedApiGroupIds: [],
+	lastSyncedAt: null
+}
+
+// Back-compat shapes consumed by inlinePeople.tsx.
+export type GroupInfo = StoredGroup
+
+export interface RosterEntry extends StoredSwimmer {
+	group?: StoredGroup
 }
 
 export interface TrainingGroupData {
-	groups: GroupInfo[]
-	nameToGroup: Map<string, GroupInfo>
+	groups: StoredGroup[]
+	nameToGroup: Map<string, StoredGroup>
 	roster: RosterEntry[]
 }
 
@@ -64,7 +74,7 @@ const GROUP_COLOR_PALETTE = [
 	"#000075"
 ]
 
-function colorForGroupId(groupId: string): string {
+export function colorForGroupId(groupId: string): string {
 	let hash = 0
 	for (let i = 0; i < groupId.length; i++) {
 		hash = (hash * 31 + groupId.charCodeAt(i)) >>> 0
@@ -76,185 +86,111 @@ export function normalizeName(name: string): string {
 	return name.trim().replace(/\s+/g, " ").toLowerCase()
 }
 
-function buildRoster(
-	athleteData: AthleteData,
-	trainingGroups: TrainingGroup[]
-): TrainingGroupData {
-	const idToGroup = new Map<string, GroupInfo>()
-	const groups: GroupInfo[] = []
+// ---- Persistence ----
 
-	for (const group of trainingGroups ?? []) {
-		const info: GroupInfo = {
-			id: group.id,
-			name: group.name,
-			color: colorForGroupId(group.id)
-		}
-		groups.push(info)
-		for (const athleteId of group.athleteIds) {
-			idToGroup.set(athleteId, info)
-		}
-	}
+export async function loadTrainingGroupsStore(): Promise<TrainingGroupsStore> {
+	const result = await chrome.storage.local.get([TRAINING_GROUPS_STORAGE_KEY])
+	return (
+		(result[TRAINING_GROUPS_STORAGE_KEY] as TrainingGroupsStore | undefined) ??
+		EMPTY_TRAINING_GROUPS_STORE
+	)
+}
 
-	const nameMap = new Map<string, GroupInfo>()
-	const entries: RosterEntry[] = []
+export async function saveTrainingGroupsStore(
+	store: TrainingGroupsStore
+): Promise<void> {
+	await chrome.storage.local.set({ [TRAINING_GROUPS_STORAGE_KEY]: store })
+}
 
-	for (const entry of athleteData?.swimmers ?? []) {
-		const swimmer = entry.swimmer
-		if (!swimmer?.id) continue
+// Resolves each roster entry's group object and indexes swimmers by
+// normalized "First Last" name, for the People-page content script to
+// cross-reference against the rendered grid.
+export function buildIndexes(store: TrainingGroupsStore): TrainingGroupData {
+	const groupById = new Map(store.groups.map((g) => [g.id, g]))
+	const nameToGroup = new Map<string, StoredGroup>()
 
-		const group = idToGroup.get(swimmer.id)
-
-		entries.push({
-			id: swimmer.id,
-			firstName: swimmer.firstName,
-			lastName: swimmer.lastName,
-			age: swimmer.age,
-			dob: swimmer.dob,
-			gender: swimmer.gender,
-			group
-		})
-
+	const roster: RosterEntry[] = store.roster.map((swimmer) => {
+		const group = swimmer.groupId ? groupById.get(swimmer.groupId) : undefined
 		if (group) {
-			nameMap.set(
+			nameToGroup.set(
 				normalizeName(`${swimmer.firstName} ${swimmer.lastName}`),
 				group
 			)
 		}
-	}
+		return { ...swimmer, group }
+	})
 
 	return {
-		groups: groups.sort((a, b) => a.name.localeCompare(b.name)),
-		nameToGroup: nameMap,
-		roster: entries
+		groups: [...store.groups].sort((a, b) => a.name.localeCompare(b.name)),
+		nameToGroup,
+		roster
 	}
 }
 
-async function fetchMeetAttendance(
-	meetId: string,
-	csrfToken: string
-): Promise<AthleteData> {
-	const res = await fetch(
-		"https://sports.active.com/json/MeetEntryManagementService/readInvitedAthleteAttendance?nonhtml=true",
-		{
-			method: "POST",
-			credentials: "include",
-			headers: {
-				accept: "*/*",
-				"content-type": "application/json",
-				"x-requested-with": "XMLHttpRequest",
-				"aws-csrftoken": csrfToken
-			},
-			body: JSON.stringify({ meetId })
-		}
-	)
+// ---- Local, offline mutations (pure - caller persists the result) ----
 
-	return res.json()
+export function createGroup(
+	store: TrainingGroupsStore,
+	name: string
+): TrainingGroupsStore {
+	const trimmed = name.trim()
+	if (!trimmed) return store
+
+	const id = `custom-${crypto.randomUUID()}`
+	const group: StoredGroup = {
+		id,
+		name: trimmed,
+		color: colorForGroupId(id),
+		custom: true
+	}
+
+	return { ...store, groups: [...store.groups, group] }
 }
 
-// A swimmer only shows up in the attendance list of meets they're actually
-// entered in -- junior development swimmers are frequently only entered in
-// development meets, never the club's most recent "main" meet -- so a single
-// meet's roster misses them. Merging every current-year meet's attendance
-// (deduped by swimmer/group id) is what actually gets the full roster.
-function mergeAthleteData(datasets: AthleteData[]): AthleteData {
-	const swimmerById = new Map<string, SwimmerEntry>()
-	const groupById = new Map<string, TrainingGroup>()
-
-	for (const data of datasets) {
-		for (const entry of data.swimmers ?? []) {
-			if (entry.swimmer?.id) swimmerById.set(entry.swimmer.id, entry)
-		}
-
-		for (const group of data.programs?.[0]?.trainingGroups ?? []) {
-			const existing = groupById.get(group.id)
-			groupById.set(group.id, {
-				...group,
-				athleteIds: existing
-					? Array.from(new Set([...existing.athleteIds, ...group.athleteIds]))
-					: group.athleteIds
-			})
-		}
-	}
+export function renameGroup(
+	store: TrainingGroupsStore,
+	groupId: string,
+	name: string
+): TrainingGroupsStore {
+	const trimmed = name.trim()
+	if (!trimmed) return store
 
 	return {
-		swimmers: Array.from(swimmerById.values()),
-		programs: [{ trainingGroups: Array.from(groupById.values()) }]
+		...store,
+		groups: store.groups.map((g) =>
+			g.id === groupId ? { ...g, name: trimmed } : g
+		)
 	}
 }
 
-export async function fetchTrainingGroups(): Promise<TrainingGroupData | null> {
-	const csrfToken = getCSRF()
-	const agencyId = getAgencyId()
+export function deleteGroup(
+	store: TrainingGroupsStore,
+	groupId: string
+): TrainingGroupsStore {
+	const target = store.groups.find((g) => g.id === groupId)
+	if (!target) return store
 
-	// Both are sniffed (by pageContext.ts) from the page's own outgoing
-	// requests. If neither has fired yet -- e.g. this runs before the site's
-	// own bootstrap calls do -- bail instead of sending a request that's
-	// guaranteed to be rejected or scoped to the wrong agency.
-	if (!csrfToken || !agencyId) {
-		console.warn(
-			"QOL: CSRF token or agency ID not available yet, skipping group fetch"
-		)
-		return null
+	return {
+		...store,
+		groups: store.groups.filter((g) => g.id !== groupId),
+		roster: store.roster.map((s) =>
+			s.groupId === groupId ? { ...s, groupId: null, manualGroup: true } : s
+		),
+		deletedApiGroupIds: target.custom
+			? store.deletedApiGroupIds
+			: [...store.deletedApiGroupIds, groupId]
 	}
+}
 
-	try {
-		const meetInfoRes = await fetch(
-			"https://sports.active.com/json/SportsSwimmingMeetSharingService/findMeetsAttendingForAgency?nonhtml=true",
-			{
-				method: "POST",
-				credentials: "include",
-				headers: {
-					"content-type": "application/json",
-					"aws-csrftoken": csrfToken,
-					"x-requested-with": "XMLHttpRequest"
-				},
-				body: JSON.stringify({
-					request: {
-						agencyId,
-						includeAll: true
-					}
-				})
-			}
+export function setSwimmerGroup(
+	store: TrainingGroupsStore,
+	swimmerId: string,
+	groupId: string | null
+): TrainingGroupsStore {
+	return {
+		...store,
+		roster: store.roster.map((s) =>
+			s.id === swimmerId ? { ...s, groupId, manualGroup: true } : s
 		)
-
-		const meetData: MeetSummary[] = await meetInfoRes.json()
-
-		const currentYear = new Date().getFullYear()
-		const meetIds = (meetData ?? [])
-			.filter(
-				(meet) =>
-					meet.sportsId &&
-					meet.meetStartDate &&
-					new Date(meet.meetStartDate).getFullYear() === currentYear
-			)
-			.map((meet) => meet.sportsId as string)
-
-		if (!meetIds.length) {
-			console.warn(
-				"QOL: no meets found for this agency in the current year, group data unavailable"
-			)
-			return null
-		}
-
-		// Fetched in parallel and via allSettled so one meet's attendance
-		// request failing doesn't blank out the roster from every other meet.
-		const results = await Promise.allSettled(
-			meetIds.map((meetId) => fetchMeetAttendance(meetId, csrfToken))
-		)
-
-		const athleteDataSets: AthleteData[] = []
-		for (const result of results) {
-			if (result.status === "fulfilled") {
-				athleteDataSets.push(result.value)
-			} else {
-				console.error("QOL: failed to load attendance for a meet", result.reason)
-			}
-		}
-
-		const merged = mergeAthleteData(athleteDataSets)
-		return buildRoster(merged, merged.programs?.[0]?.trainingGroups)
-	} catch (err) {
-		console.error("QOL: failed to load training group data", err)
-		return null
 	}
 }

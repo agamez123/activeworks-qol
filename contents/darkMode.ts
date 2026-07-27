@@ -1,6 +1,13 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { DARK_MODE_STORAGE_KEY } from "~lib/storage"
+import {
+	DEFAULT_THEME,
+	LEGACY_DARK_MODE_STORAGE_KEY,
+	resolveStoredTheme,
+	THEME_STORAGE_KEY,
+	type Theme
+} from "~lib/storage"
+import { THEME_VARS, type ThemeVars } from "~lib/themeColors"
 
 export const config: PlasmoCSConfig = {
 	matches: ["*://sports.active.com/*"],
@@ -86,15 +93,17 @@ const transitionCss = `
 	}
 `
 
-const css = `
+function buildThemeCss(vars: ThemeVars) {
+	return `
 	:root {
-		--qol-bg: #1e1e1e;
-		--qol-bg-alt: #222222;
-		--qol-bg-elevated: #2a2a2a;
-		--qol-bg-hover: #33475a;
-		--qol-border: #444444;
-		--qol-text: #e4e4e4;
-		--qol-link: #4dbde9;
+		--qol-bg: ${vars.bg};
+		--qol-bg-alt: ${vars.bgAlt};
+		--qol-bg-elevated: ${vars.bgElevated};
+		--qol-bg-hover: ${vars.bgHover};
+		--qol-bg-selected: ${vars.bgSelected};
+		--qol-border: ${vars.border};
+		--qol-text: ${vars.text};
+		--qol-link: ${vars.link};
 	}
 
 	html,
@@ -190,7 +199,7 @@ const css = `
 	}
 
 	tbody tr.selected {
-		background-color: #244b57 !important;
+		background-color: var(--qol-bg-selected) !important;
 		color: var(--qol-text) !important;
 	}
 
@@ -301,10 +310,19 @@ const css = `
 		color: var(--qol-text) !important;
 	}
 `
+}
 
-// Optimistically on so there's no flash-of-light for the common case;
-// corrected as soon as storage resolves if the user has disabled it.
-let darkModeEnabled = true
+// Optimistically dark so there's no flash-of-light for the common case;
+// corrected as soon as storage resolves to whatever theme is actually saved.
+let theme: Theme = DEFAULT_THEME
+
+// The theme actually reflected in the DOM right now, as opposed to `theme`
+// (the desired theme). applyTheme() runs on every DOM mutation anywhere on
+// the page (see the MutationObserver below), so it must be a no-op unless
+// the theme has actually changed -- otherwise rewriting the stylesheet's
+// textContent on every call is itself a mutation, which retriggers the
+// observer, which rewrites it again: an infinite loop that pegs the tab.
+let appliedTheme: Theme | null = null
 
 function injectTransitionStyle() {
 	if (document.getElementById(TRANSITION_STYLE_ID)) return
@@ -333,57 +351,68 @@ function injectLayoutPaddingStyle() {
 	;(document.head || document.documentElement).appendChild(style)
 }
 
-function injectStyle() {
-	injectRowStripeStyle()
-	injectLayoutPaddingStyle()
-	injectTransitionStyle()
+function injectThemeStyle(vars: ThemeVars) {
+	let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null
 
-	if (document.getElementById(STYLE_ID)) return
+	if (!style) {
+		style = document.createElement("style")
+		style.id = STYLE_ID
+		;(document.head || document.documentElement).appendChild(style)
+	}
 
-	const style = document.createElement("style")
-	style.id = STYLE_ID
-	style.textContent = css
-	;(document.head || document.documentElement).appendChild(style)
+	style.textContent = buildThemeCss(vars)
 }
 
 function removeStyle() {
 	document.getElementById(STYLE_ID)?.remove()
 }
 
-function applyDarkMode() {
-	if (darkModeEnabled) injectStyle()
+// Row striping / layout padding / transitions are structural QoL fixes that
+// apply under every theme, including "light" (the site's native colors).
+// Only "dark" and "tan" additionally get a color-override stylesheet.
+function applyTheme() {
+	injectRowStripeStyle()
+	injectLayoutPaddingStyle()
+	injectTransitionStyle()
+
+	// Re-check actual DOM presence (not just `appliedTheme`) so a stylesheet
+	// the site's own bootstrap process rips out of a rebuilt <head> still
+	// gets re-injected, even though the desired theme itself hasn't changed.
+	const styleTagPresent = document.getElementById(STYLE_ID) !== null
+	if (theme === appliedTheme && (theme === "light" || styleTagPresent)) return
+
+	if (theme === "light") {
+		removeStyle()
+	} else {
+		injectThemeStyle(THEME_VARS[theme])
+	}
+
+	appliedTheme = theme
 }
 
-applyDarkMode()
+applyTheme()
 
-chrome.storage.sync.get([DARK_MODE_STORAGE_KEY], (result) => {
-	darkModeEnabled = result[DARK_MODE_STORAGE_KEY] ?? true
-
-	if (darkModeEnabled) {
-		applyDarkMode()
-	} else {
-		removeStyle()
+chrome.storage.sync.get(
+	[THEME_STORAGE_KEY, LEGACY_DARK_MODE_STORAGE_KEY],
+	(result) => {
+		theme = resolveStoredTheme(result)
+		applyTheme()
 	}
-})
+)
 
 chrome.storage.onChanged.addListener((changes, area) => {
-	if (area !== "sync" || !changes[DARK_MODE_STORAGE_KEY]) return
+	if (area !== "sync" || !changes[THEME_STORAGE_KEY]) return
 
-	darkModeEnabled = changes[DARK_MODE_STORAGE_KEY].newValue ?? true
-
-	if (darkModeEnabled) {
-		applyDarkMode()
-	} else {
-		removeStyle()
-	}
+	theme = changes[THEME_STORAGE_KEY].newValue ?? DEFAULT_THEME
+	applyTheme()
 })
 
 // Re-apply if the site's own bootstrap process rebuilds the document
 // and drops our injected stylesheet.
-const observer = new MutationObserver(() => applyDarkMode())
+const observer = new MutationObserver(() => applyTheme())
 observer.observe(document.documentElement, {
 	childList: true,
 	subtree: true
 })
 
-window.addEventListener("hashchange", applyDarkMode)
+window.addEventListener("hashchange", applyTheme)

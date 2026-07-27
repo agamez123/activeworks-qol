@@ -2,8 +2,10 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { buildTailoredCsv, parseReportRows, UNGROUPED_ID } from "~lib/csvFormat"
 import { buildTopTimesUrl, fetchTopTimesCsv } from "~lib/ssrsExport"
+import { TRAINING_GROUPS_STORAGE_KEY } from "~lib/storage"
 import {
-	fetchTrainingGroups,
+	buildIndexes,
+	loadTrainingGroupsStore,
 	type TrainingGroupData
 } from "~lib/trainingGroups"
 
@@ -19,12 +21,7 @@ const STATUS_ID = "qol-times-export-status"
 const BY_NAME_LINK_STYLE_ID = "qol-toptimes-bynamelink-style"
 const WIZARD_LISTITEM_STYLE_ID = "qol-toptimes-wizard-listitem-style"
 
-const GROUP_FETCH_RETRY_MS = 1500
-const GROUP_FETCH_MAX_TRIES = 20
-
 let groupData: TrainingGroupData | null = null
-let groupFetchTries = 0
-let groupFetchTimer: number | null = null
 
 // The wizard's program list truncates long program names with an ellipsis
 // (site CSS sets white-space: nowrap + text-overflow: ellipsis), so wrap
@@ -140,31 +137,19 @@ function renderGroupCheckboxes() {
 	container.appendChild(buildGroupCheckbox(UNGROUPED_ID, "Ungrouped"))
 }
 
-// Group membership comes from the JSON APIs, which need the CSRF token that
-// pageContext.ts sniffs from the site's own requests -- on a fresh page load
-// those may not have fired yet, so poll until they have.
-function loadGroupData() {
-	if (groupData || groupFetchTimer !== null) return
+// Group membership is read from the local cache the popup maintains
+// (synced from the site's JSON APIs on demand, not on every page load).
+async function loadGroupData() {
+	const store = await loadTrainingGroupsStore()
+	groupData = buildIndexes(store)
+	renderGroupCheckboxes()
 
-	const attempt = async () => {
-		groupFetchTimer = null
-		groupFetchTries++
-
-		const data = await fetchTrainingGroups()
-		if (data) {
-			groupData = data
-			renderGroupCheckboxes()
-			return
-		}
-
-		if (groupFetchTries < GROUP_FETCH_MAX_TRIES) {
-			groupFetchTimer = window.setTimeout(attempt, GROUP_FETCH_RETRY_MS)
-		} else {
-			setStatus("couldn't load training groups (try reloading the page)", true)
-		}
+	if (!groupData.groups.length) {
+		setStatus(
+			'no training groups yet - open the extension popup and hit "Sync now"',
+			true
+		)
 	}
-
-	attempt()
 }
 
 function selectedGroupIds(): Set<string> {
@@ -350,3 +335,12 @@ new MutationObserver(() => {
 
 // handle SPA navigation changes
 window.addEventListener("hashchange", init)
+
+// Picks up group renames/additions/roster moves made via the popup while
+// this bar is already open.
+chrome.storage.onChanged.addListener((changes, area) => {
+	if (area !== "local" || !changes[TRAINING_GROUPS_STORAGE_KEY]) return
+	if (!document.getElementById(BAR_ID)) return
+
+	loadGroupData()
+})
