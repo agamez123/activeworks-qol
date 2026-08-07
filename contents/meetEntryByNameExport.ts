@@ -21,10 +21,10 @@ const BACKDROP_ID = "qol-entrybyname-export-modal-backdrop"
 const BUTTON_STYLE_ID = "qol-entrybyname-export-btn-style"
 const PREVIEW_ROW_LIMIT = 5
 
-// Brand purple from the extension icon -- used to make the injected export
+// Brand charcoal from the extension icon -- used to make the injected export
 // button read as an ASM Toolkit feature rather than a native site control.
-const BRAND_COLOR = "#7c3aed"
-const BRAND_COLOR_HOVER = "#8b5cf6"
+const BRAND_COLOR = "#3a3b3d"
+const BRAND_COLOR_HOVER = "#57585b"
 
 // Uses a class-on-class selector (higher specificity than darkMode.ts's
 // plain ".btn" rules) so the brand styling wins regardless of theme.
@@ -43,7 +43,7 @@ function injectButtonStyle() {
 			align-items: center !important;
 			gap: 7px !important;
 			font-weight: 600 !important;
-			box-shadow: 0 1px 4px rgba(124, 58, 237, 0.45) !important;
+			box-shadow: 0 1px 4px rgba(58, 59, 61, 0.45) !important;
 		}
 
 		.btn.qol-entrybyname-export-btn:hover {
