@@ -39,3 +39,7 @@ export function resolveStoredTheme(stored: StoredThemeResult): Theme {
 // Training group roster/groups cache lives in chrome.storage.local (not
 // sync) - a full club roster can run well past sync's 8KB-per-item quota.
 export const TRAINING_GROUPS_STORAGE_KEY = "trainingGroupsStore"
+
+// User's chosen column subset/order for the EntryByName CSV export (an
+// array of EntryColumn keys, see lib/meetEntryByNameFormat.ts).
+export const ENTRY_BY_NAME_COLUMNS_STORAGE_KEY = "entryByNameExportColumns"
