@@ -1,17 +1,16 @@
 # ASM Toolkit
 
-A browser extension that adds quality-of-life improvements to
-[Active Swim Manager](https://sports.active.com/), for club staff managing
-swimmers.
+A browser extension for club staff who manage swimmers in
+[Active Swim Manager](https://sports.active.com/). It adds the small features
+the site is missing.
 
 ## Features
 
-- **Dark mode** — a site-wide dark theme, toggleable from the extension
+- **Dark mode.** A site-wide dark theme you can turn on from the extension
   popup.
-- **Training group column** — adds a color-coded "Group" column to the
-  People grid, and a filter bar that lets you view every swimmer in a given
-  training group at once (the native grid only pages 20 rows at a time and
-  has no group filter of its own).
+- **Training group column.** Adds a color-coded "Group" column to the People
+  grid, plus a filter bar that shows every swimmer in a training group at
+  once. The native grid shows 20 rows per page and can't filter by group.
 
 ## Development
 
@@ -20,8 +19,8 @@ npm install
 npm run dev
 ```
 
-Then load the unpacked extension from `build/chrome-mv3-dev` in your
-browser's extensions page (with developer mode enabled).
+Open your browser's extensions page, turn on developer mode, and load the
+unpacked extension from `build/chrome-mv3-dev`.
 
 ## Production build
 
@@ -29,7 +28,7 @@ browser's extensions page (with developer mode enabled).
 npm run build
 ```
 
-Produces a production bundle in `build/chrome-mv3-prod`, ready to zip and
-submit to the Chrome Web Store.
+This writes a production bundle to `build/chrome-mv3-prod`. Zip it and submit
+it to the Chrome Web Store.
 
 Built with [Plasmo](https://docs.plasmo.com/).
